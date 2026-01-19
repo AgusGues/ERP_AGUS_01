@@ -1,0 +1,19 @@
+﻿@model List<Items>
+
+<a asp-action="Create" class="btn btn-primary">Tambah</a>
+
+<table class="table">
+	<tr>
+		<th>Kode</th>
+		<th>Nama</th>
+		<th>Unit</th>
+	</tr>
+	@foreach (var i in Model)
+	{
+		<tr>
+			<td>@i.ItemCode</td>
+			<td>@i.ItemName</td>
+			<td>@i.Unit</td>
+		</tr>
+	}
+</table>
