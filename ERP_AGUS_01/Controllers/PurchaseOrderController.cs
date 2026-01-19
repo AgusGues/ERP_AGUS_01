@@ -33,6 +33,7 @@ namespace ERP_AGUS_01.Controllers
                     Status = r["Status"].ToString()
                 });
             }
+
             return View(list);
         }
 
@@ -139,6 +140,21 @@ namespace ERP_AGUS_01.Controllers
                 price = Convert.ToDecimal(dt.Rows[0]["Price"]);
 
             return Json(price);
+        }
+
+        public IActionResult Outstanding(int id)
+        {
+            DataTable dt = _db.ExecuteQuery(@"
+            SELECT *
+            FROM vw_POOutstanding
+            WHERE POId = @POId
+              AND OutstandingQty > 0",
+                new[] {
+                new SqlParameter("@POId", id)
+                });
+
+            ViewBag.POId = id;
+            return View(dt);
         }
 
 

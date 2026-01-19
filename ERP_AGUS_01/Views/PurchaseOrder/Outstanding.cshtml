@@ -1,0 +1,44 @@
+﻿@using System.Data
+@model DataTable
+
+@{
+    ViewData["Title"] = "Outstanding Purchase Order";
+}
+
+<h3>Outstanding PO - @ViewBag.POId</h3>
+
+<table class="table table-bordered table-striped">
+    <thead class="table-dark">
+        <tr>
+            <th>Item</th>
+            <th class="text-end">PO Qty</th>
+            <th class="text-end">Received</th>
+            <th class="text-end">Outstanding</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (DataRow r in Model.Rows)
+        {
+            <tr>
+                <td>@r["ItemName"]</td>
+                <td class="text-end">@r["POQty"]</td>
+                <td class="text-end">@r["ReceivedQty"]</td>
+                <td class="text-end fw-bold text-danger">
+                    @r["OutstandingQty"]
+                </td>
+            </tr>
+        }
+        @if (Model.Rows.Count == 0)
+        {
+            <tr>
+                <td colspan="4" class="text-center text-muted">
+                    Tidak ada Outstanding
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a href="/PurchaseOrder" class="btn btn-secondary">
+    Kembali
+</a>
