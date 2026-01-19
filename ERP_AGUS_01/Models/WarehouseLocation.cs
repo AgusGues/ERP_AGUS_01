@@ -4,6 +4,7 @@
     {
         public int LocationId { get; set; }
         public int WarehouseId { get; set; }
+        public string WarehouseName { get; set; } //dari hasil join tabel warehouses
         public string LocationCode { get; set; }
     }
 }
