@@ -1,7 +1,12 @@
+using ERP_AGUS_01.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+//register koneksi database
+builder.Services.AddScoped<DbHelper>();
 
 var app = builder.Build();
 
