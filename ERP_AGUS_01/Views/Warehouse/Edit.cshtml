@@ -1,0 +1,20 @@
+﻿@model Warehouses
+
+<form method="post">
+    <input type="hidden" asp-for="WarehouseId" />
+
+    <div class="mb-2">
+        <label>Kode Gudang</label>
+        <input asp-for="WarehoseCode" class="form-control" readonly />
+    </div>
+
+    <div class="mb-2">
+        <label>Nama Gudang</label>
+        <input asp-for="WarehouseName" class="form-control" required />
+    </div>
+
+    
+
+    <button class="btn btn-success">Update</button>
+    <a asp-action="Index" class="btn btn-secondary">Batal</a>
+</form>

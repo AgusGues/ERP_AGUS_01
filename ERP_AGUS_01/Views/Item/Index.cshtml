@@ -1,19 +1,33 @@
 ﻿@model List<Items>
 
-<a asp-action="Create" class="btn btn-primary">Tambah</a>
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
 
-<table class="table">
-	<tr>
-		<th>Kode</th>
-		<th>Nama</th>
-		<th>Unit</th>
-	</tr>
-	@foreach (var i in Model)
-	{
-		<tr>
-			<td>@i.ItemCode</td>
-			<td>@i.ItemName</td>
-			<td>@i.Unit</td>
-		</tr>
-	}
+<a asp-action="Create" class="btn btn-primary mb-2">Tambah Item</a>
+
+<table class="table table-bordered">
+    <tr>
+        <th>Kode</th>
+        <th>Nama</th>
+        <th>Unit</th>
+        <th width="160">Aksi</th>
+    </tr>
+    @foreach (var i in Model)
+    {
+        <tr>
+            <td>@i.ItemCode</td>
+            <td>@i.ItemName</td>
+            <td>@i.Unit</td>
+            <td>
+                <a asp-action="Edit" asp-route-id="@i.ItemId"
+                   class="btn btn-warning btn-sm">Edit</a>
+
+                <a asp-action="Delete" asp-route-id="@i.ItemId"
+                   onclick="return confirm('Yakin hapus item ini?')"
+                   class="btn btn-danger btn-sm">Delete</a>
+            </td>
+        </tr>
+    }
 </table>

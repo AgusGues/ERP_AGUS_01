@@ -1,0 +1,23 @@
+﻿@model Items
+
+<form method="post">
+    <input type="hidden" asp-for="ItemId" />
+
+    <div class="mb-2">
+        <label>Kode Item</label>
+        <input asp-for="ItemCode" class="form-control" readonly />
+    </div>
+
+    <div class="mb-2">
+        <label>Nama Item</label>
+        <input asp-for="ItemName" class="form-control" required />
+    </div>
+
+    <div class="mb-2">
+        <label>Unit</label>
+        <input asp-for="Unit" class="form-control" required />
+    </div>
+
+    <button class="btn btn-success">Update</button>
+    <a asp-action="Index" class="btn btn-secondary">Batal</a>
+</form>

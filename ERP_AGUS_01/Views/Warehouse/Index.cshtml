@@ -1,0 +1,28 @@
+﻿@model List<Warehouses>
+
+<a asp-action="Create" class="btn btn-primary mb-2">Tambah Gudang</a>
+
+<table class="table table-bordered">
+    <tr>
+        <th>Kode</th>
+        <th>Nama Gudang</th>
+        
+        <th width="160">Aksi</th>
+    </tr>
+    @foreach (var w in Model)
+    {
+        <tr>
+            <td>@w.WarehoseCode</td>
+            <td>@w.WarehouseName</td>
+            
+            <td>
+                <a asp-action="Edit" asp-route-id="@w.WarehouseId"
+                   class="btn btn-warning btn-sm">Edit</a>
+
+                <a asp-action="Delete" asp-route-id="@w.WarehouseId"
+                   onclick="return confirm('Hapus gudang ini?')"
+                   class="btn btn-danger btn-sm">Delete</a>
+            </td>
+        </tr>
+    }
+</table>
