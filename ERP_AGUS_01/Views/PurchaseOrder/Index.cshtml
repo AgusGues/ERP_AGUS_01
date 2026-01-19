@@ -1,0 +1,21 @@
+﻿@model List<PurchaseOrder>
+
+<a asp-action="Create" class="btn btn-primary mb-2">Buat PO</a>
+
+<table class="table table-bordered">
+    <tr>
+        <th>No PO</th>
+        <th>Tanggal</th>
+        <th>Supplier</th>
+        <th>Status</th>
+    </tr>
+    @foreach (var p in Model)
+    {
+        <tr>
+            <td>@p.PONumber</td>
+            <td>@p.PODate.ToShortDateString()</td>
+            <td>@p.SupplierName</td>
+            <td>@p.Status</td>
+        </tr>
+    }
+</table>

@@ -1,0 +1,220 @@
+﻿@{
+    ViewData["Title"] = "Create Purchase Order";
+}
+
+<h3 class="mb-3">Create Purchase Order</h3>
+
+<form asp-action="Create" method="post">
+
+    <!-- SUPPLIER -->
+    <input type="hidden" name="SupplierId" id="SupplierId" />
+
+    <div class="mb-3">
+        <label class="form-label">Supplier</label>
+        <input type="text"
+               id="SupplierSearch"
+               class="form-control"
+               placeholder="Ketik nama supplier..."
+               autocomplete="off"
+               required />
+    </div>
+
+    <!-- PO ITEMS -->
+    <table class="table table-bordered" id="itemTable">
+        <thead class="table-light">
+            <tr>
+                <th width="40%">Item</th>
+                <th width="15%">Qty</th>
+                <th width="20%">Price</th>
+                <th width="20%">Subtotal</th>
+                <th width="5%"></th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <button type="button"
+            class="btn btn-outline-primary mb-3"
+            onclick="addRow()">
+        + Add Item
+    </button>
+
+    <div class="text-end mb-3">
+        <h5>Total: <span id="grandTotal">0</span></h5>
+    </div>
+
+    <button class="btn btn-success">Save Purchase Order</button>
+</form>
+
+<!-- ========================= -->
+<!-- SCRIPT DI FILE YANG SAMA -->
+<!-- ========================= -->
+@section Scripts {
+    <script>
+        /* ===================== GLOBAL STATE ===================== */
+        let selectedItemIds = new Set();
+
+        /* ===================== DOCUMENT READY ===================== */
+        $(function () {
+
+            /* ===== SUPPLIER AUTOCOMPLETE ===== */
+            $("#SupplierSearch").autocomplete({
+                minLength: 2,
+                source: function (request, response) {
+                    $.ajax({
+                        url: '@Url.Action("SearchSupplier", "PurchaseOrder")',
+                        dataType: "json",
+                        data: { term: request.term },
+                        success: function (data) {
+                            response(data);
+                        }
+                    });
+                },
+                select: function (event, ui) {
+                    $("#SupplierSearch").val(ui.item.label);
+                    $("#SupplierId").val(ui.item.id);
+                    return false;
+                }
+            });
+
+        });
+
+        /* ===================== ADD ROW ===================== */
+        function addRow() {
+
+            let row = `
+            <tr>
+                <td>
+                    <input type="hidden" class="item-id" />
+                    <input type="text"
+                           class="form-control item-search"
+                           placeholder="Ketik nama item..."
+                           autocomplete="off" />
+                </td>
+                <td>
+                    <input type="number"
+                           class="form-control qty"
+                           value="1" min="1" />
+                </td>
+                <td>
+                    <input type="number"
+                           class="form-control price"
+                           value="0" min="0" />
+                </td>
+                <td>
+                    <input type="text"
+                           class="form-control subtotal"
+                           readonly value="0" />
+                </td>
+                <td class="text-center">
+                    <button type="button"
+                            class="btn btn-danger btn-sm"
+                            onclick="removeRow(this)">X</button>
+                </td>
+            </tr>`;
+
+            $("#itemTable tbody").append(row);
+            reindexRows();
+            initItemAutocomplete();
+        }
+
+        /* ===================== ITEM AUTOCOMPLETE ===================== */
+        function initItemAutocomplete() {
+
+            $(".item-search").autocomplete({
+                minLength: 2,
+                source: function (request, response) {
+                    $.ajax({
+                        url: '@Url.Action("SearchItem", "PurchaseOrder")',
+                        dataType: "json",
+                        data: { term: request.term },
+                        success: function (data) {
+                            response(data);
+                        }
+                    });
+                },
+                        select: function (event, ui) {
+
+            let row = $(this).closest("tr");
+            let newItemId = String(ui.item.id);
+            let supplierId = $("#SupplierId").val();
+
+            if (!supplierId) {
+                alert("Pilih supplier terlebih dahulu");
+                return false;
+            }
+
+            let oldItemId = row.find(".item-id").val();
+            if (oldItemId) selectedItemIds.delete(oldItemId);
+
+            if (selectedItemIds.has(newItemId)) {
+                alert("Item ini sudah dipilih di baris lain.");
+                $(this).val("");
+                row.find(".item-id").val("");
+                return false;
+            }
+
+            selectedItemIds.add(newItemId);
+
+            row.find(".item-search").val(ui.item.label);
+            row.find(".item-id").val(newItemId);
+
+            /* === AUTO LOAD HARGA TERAKHIR SUPPLIER === */
+            $.get('@Url.Action("GetLastPrice", "PurchaseOrder")',
+                { supplierId: supplierId, itemId: newItemId },
+                function (price) {
+                    row.find(".price").val(price);
+                    calculateRow(row);
+                });
+
+            return false;
+        }
+
+            });
+        }
+
+        /* ===================== CALCULATION ===================== */
+        $(document).on("keyup change", ".qty, .price", function () {
+            calculateRow($(this).closest("tr"));
+        });
+
+        function calculateRow(row) {
+            let qty = parseFloat(row.find(".qty").val()) || 0;
+            let price = parseFloat(row.find(".price").val()) || 0;
+            row.find(".subtotal").val((qty * price).toFixed(2));
+            calculateGrandTotal();
+        }
+
+        function calculateGrandTotal() {
+            let total = 0;
+            $(".subtotal").each(function () {
+                total += parseFloat($(this).val()) || 0;
+            });
+            $("#grandTotal").text(total.toFixed(2));
+        }
+
+        /* ===================== REMOVE ROW ===================== */
+        function removeRow(btn) {
+            let row = $(btn).closest("tr");
+            let itemId = row.find(".item-id").val();
+
+            if (itemId) {
+                selectedItemIds.delete(itemId);
+            }
+
+            row.remove();
+            reindexRows();
+            calculateGrandTotal();
+        }
+
+        /* ===================== MODEL BINDING ===================== */
+        function reindexRows() {
+            $("#itemTable tbody tr").each(function (i) {
+                $(this).find(".item-id").attr("name", `Items[${i}].ItemId`);
+                $(this).find(".qty").attr("name", `Items[${i}].Qty`);
+                $(this).find(".price").attr("name", `Items[${i}].Price`);
+            });
+        }
+    </script>
+}
+
