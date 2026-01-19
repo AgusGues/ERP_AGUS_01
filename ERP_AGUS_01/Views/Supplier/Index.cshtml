@@ -1,0 +1,30 @@
+﻿@model List<Supplier>
+
+<a asp-action="Create" class="btn btn-primary mb-2">Tambah Supplier</a>
+
+<table class="table table-bordered">
+    <tr>
+        <th>Kode</th>
+        <th>Nama Supplier</th>
+        <th>Alamat</th>
+        <th>Telepon</th>
+        <th width="160">Aksi</th>
+    </tr>
+    @foreach (var s in Model)
+    {
+        <tr>
+            <td>@s.SupplierCode</td>
+            <td>@s.SupplierName</td>
+            <td>@s.Address</td>
+            <td>@s.Phone</td>
+            <td>
+                <a asp-action="Edit" asp-route-id="@s.SupplierId"
+                   class="btn btn-warning btn-sm">Edit</a>
+
+                <a asp-action="Delete" asp-route-id="@s.SupplierId"
+                   onclick="return confirm('Hapus supplier ini?')"
+                   class="btn btn-danger btn-sm">Delete</a>
+            </td>
+        </tr>
+    }
+</table>

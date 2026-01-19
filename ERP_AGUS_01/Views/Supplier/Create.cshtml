@@ -1,0 +1,21 @@
+﻿@model Supplier
+
+<form method="post">
+    <div class="mb-2">
+        <label>Nama Supplier</label>
+        <input asp-for="SupplierName" class="form-control" required />
+    </div>
+
+    <div class="mb-2">
+        <label>Alamat</label>
+        <textarea asp-for="Address" class="form-control"></textarea>
+    </div>
+
+    <div class="mb-2">
+        <label>Telepon</label>
+        <input asp-for="Phone" class="form-control" />
+    </div>
+
+    <button class="btn btn-success">Simpan</button>
+    <a asp-action="Index" class="btn btn-secondary">Batal</a>
+</form>
