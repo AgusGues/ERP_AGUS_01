@@ -1,0 +1,28 @@
+﻿@model List<WarehouseLocation>
+
+<a asp-action="Create" class="btn btn-primary mb-2">Tambah Lokasi</a>
+
+<table class="table table-bordered">
+    <tr>
+        <th>Kode Lokasi</th>
+        
+        <th>Gudang</th>
+        <th width="160">Aksi</th>
+    </tr>
+    @foreach (var l in Model)
+    {
+        <tr>
+            <td>@l.LocationCode</td>
+            
+            <td>@l.WarehouseName</td>
+            <td>
+                <a asp-action="Edit" asp-route-id="@l.LocationId"
+                   class="btn btn-warning btn-sm">Edit</a>
+
+                <a asp-action="Delete" asp-route-id="@l.LocationId"
+                   onclick="return confirm('Hapus lokasi ini?')"
+                   class="btn btn-danger btn-sm">Delete</a>
+            </td>
+        </tr>
+    }
+</table>

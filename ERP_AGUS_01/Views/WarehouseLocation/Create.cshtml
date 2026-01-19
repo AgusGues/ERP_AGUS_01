@@ -1,0 +1,22 @@
+﻿@model WarehouseLocation
+@using System.Data
+
+<form method="post">
+    <div class="mb-2">
+        <label>Gudang</label>
+        <select asp-for="WarehouseId" class="form-control" required>
+            <option value="">-- pilih gudang --</option>
+            @foreach (DataRow r in ((DataTable)ViewBag.Warehouses).Rows)
+            {
+                <option value="@r["WarehouseId"]">
+                    @r["WarehouseName"]
+                </option>
+            }
+        </select>
+    </div>
+
+    
+
+    <button class="btn btn-success">Simpan</button>
+    <a asp-action="Index" class="btn btn-secondary">Batal</a>
+</form>

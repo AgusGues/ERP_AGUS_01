@@ -1,0 +1,29 @@
+﻿@model WarehouseLocation
+@using System.Data
+
+<form method="post">
+    <input type="hidden" asp-for="LocationId" />
+
+    <div class="mb-2">
+        <label>Kode Lokasi</label>
+        <input asp-for="LocationCode" class="form-control" readonly />
+    </div>
+
+    <div class="mb-2">
+        <label>Gudang</label>
+        <select asp-for="WarehouseId" class="form-control" required>
+            @foreach (DataRow r in ((DataTable)ViewBag.Warehouses).Rows)
+            {
+                <option value="@r["WarehouseId"]"
+                        selected="@(r["WarehouseId"].ToString() == Model.WarehouseId.ToString())">
+                    @r["WarehouseName"]
+                </option>
+            }
+        </select>
+    </div>
+
+    
+
+    <button class="btn btn-success">Update</button>
+    <a asp-action="Index" class="btn btn-secondary">Batal</a>
+</form>
