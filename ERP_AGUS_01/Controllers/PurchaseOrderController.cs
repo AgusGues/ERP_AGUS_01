@@ -15,26 +15,19 @@ namespace ERP_AGUS_01.Controllers
         public IActionResult Index()
         {
             DataTable dt = _db.ExecuteQuery(@"
-            SELECT p.POId, p.PONumber, p.PODate, p.Status,
-                   s.SupplierName
+            SELECT
+            p.POId,
+            p.PONumber,
+            p.PODate,
+            p.Status,
+            s.SupplierName
             FROM PurchaseOrders p
             JOIN Suppliers s ON p.SupplierId = s.SupplierId
-            ORDER BY p.POId DESC");
+            ORDER BY p.PODate DESC");
 
-            List<PurchaseOrder> list = new();
-            foreach (DataRow r in dt.Rows)
-            {
-                list.Add(new PurchaseOrder
-                {
-                    POId = (int)r["POId"],
-                    PONumber = r["PONumber"].ToString(),
-                    PODate = Convert.ToDateTime(r["PODate"]),
-                    SupplierName = r["SupplierName"].ToString(),
-                    Status = r["Status"].ToString()
-                });
-            }
+            return View(dt);
 
-            return View(list);
+            
         }
 
         // ================= CREATE =================

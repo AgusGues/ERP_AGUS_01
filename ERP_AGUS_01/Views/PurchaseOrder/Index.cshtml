@@ -1,22 +1,30 @@
-﻿@model List<PurchaseOrder>
+﻿@using System.Data
+@model DataTable
 
 <a asp-action="Create" class="btn btn-primary mb-2">Buat PO</a>
 
-<table class="table table-bordered">
+<h3>Purchase Order List</h3>
+<table class="table table-bordered table-hover">
+    <thead class="table-dark">
     <tr>
+        <th>No</th>
         <th>No PO</th>
         <th>Tanggal</th>
         <th>Supplier</th>
         <th>Status</th>
+        <th width="220">Action</th>
+
 
     </tr>
-    @foreach (var p in Model)
+    </thead>
+    @foreach ( DataRow row in Model.Rows)
     {
         <tr>
-            <td>@p.PONumber</td>
-            <td>@p.PODate.ToShortDateString()</td>
-            <td>@p.SupplierName</td>
-            <td>@p.Status</td>
+            <td>@row["POId"]</td>
+            <td>@row["PONumber"]</td>
+            <td>@row["SupplierName"]</td>
+            <td>@Convert.ToDateTime(row["PODate"]).ToString("dd/MM/yyyy")</td>
+            <td>@row["Status"]</td>
         </tr>
     }
 </table>
