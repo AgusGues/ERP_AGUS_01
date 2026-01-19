@@ -43,16 +43,30 @@ namespace ERP_AGUS_01.Controllers
         }
 
         [HttpPost]
-        public IActionResult Create(int SupplierId, int[] ItemId, decimal[] Qty, decimal[] Price)
+        public IActionResult Create(PurchaseOrderCreateVM model)
         {
+            if (!ModelState.IsValid || model.Items.Count == 0)
+            {
+                TempData["Error"] = "Isi supplier dan minimal satu item.";
+                return View(model);
+            }
+
+            // Insert PO header
             int poId = Convert.ToInt32(
                 _db.ExecuteScalar(
                     "EXEC sp_InsertPO @SupplierId",
-                    new[] { new SqlParameter("@SupplierId", SupplierId) }
-                ));
+                    new[] { new SqlParameter("@SupplierId", model.SupplierId) }
+                )
+            );
 
-            for (int i = 0; i < ItemId.Length; i++)
+            if (poId <= 0)
+                throw new Exception("Gagal membuat PO Header");
+
+            // Insert PO details
+            foreach (var item in model.Items)
             {
+                if (item.ItemId <= 0) continue;
+
                 _db.ExecuteNonQuery(@"
                 INSERT INTO PurchaseOrderDetails
                 (POId, ItemId, Qty, Price)
@@ -60,14 +74,58 @@ namespace ERP_AGUS_01.Controllers
                     new[]
                     {
                     new SqlParameter("@POId", poId),
-                    new SqlParameter("@ItemId", ItemId[i]),
-                    new SqlParameter("@Qty", Qty[i]),
-                    new SqlParameter("@Price", Price[i])
+                    new SqlParameter("@ItemId", item.ItemId),
+                    new SqlParameter("@Qty", item.Qty),
+                    new SqlParameter("@Price", item.Price)
                     });
             }
 
+            TempData["Success"] = $"PO {poId} berhasil dibuat.";
             return RedirectToAction(nameof(Index));
         }
+        //public IActionResult Create(int SupplierId, int[] ItemId, decimal[] Qty, decimal[] Price)
+        //{
+        //    Console.WriteLine("MASUK CREATE POST");
+
+        //    Console.WriteLine("ItemId null? " + (ItemId == null));
+        //    Console.WriteLine("ItemId Length: " + (ItemId?.Length ?? 0));
+
+        //    int poId = Convert.ToInt32(
+        //    _db.ExecuteScalar(
+        //        "EXEC sp_InsertPO @SupplierId",
+        //        new[] {
+        //            new SqlParameter("@SupplierId", SupplierId)
+        //}
+        //));
+
+        //    if (poId <= 0)
+        //    {
+        //        throw new Exception("Gagal membuat PO Header");
+        //    }
+
+        //    for (int i = 0; i < ItemId.Length; i++)
+        //    {
+        //        if (ItemId[i] <= 0)
+        //            continue;
+
+        //        _db.ExecuteNonQuery(@"
+        //        INSERT INTO PurchaseOrderDetails
+        //        (POId, ItemId, Qty, Price)
+        //        VALUES (@POId, @ItemId, @Qty, @Price)",
+        //            new[]
+        //            {
+        //                new SqlParameter("@POId", poId),
+        //                new SqlParameter("@ItemId", ItemId[i]),
+        //                new SqlParameter("@Qty", Qty[i]),
+        //                new SqlParameter("@Price", Price[i])
+        //            });
+        //    }
+        //    Console.WriteLine("POId = " + poId);
+        //    return RedirectToAction(nameof(Index));
+
+        //}
+
+
 
         public JsonResult SearchSupplier(string term)
         {

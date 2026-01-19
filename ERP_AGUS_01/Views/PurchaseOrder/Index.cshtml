@@ -1,6 +1,14 @@
 ﻿@using System.Data
 @model DataTable
 
+@if (Model == null || Model.Rows.Count == 0)
+{
+    <div class="alert alert-warning">
+        Data PO belum ada
+    </div>
+}
+
+
 <a asp-action="Create" class="btn btn-primary mb-2">Buat PO</a>
 
 <h3>Purchase Order List</h3>
@@ -25,6 +33,13 @@
             <td>@row["SupplierName"]</td>
             <td>@Convert.ToDateTime(row["PODate"]).ToString("dd/MM/yyyy")</td>
             <td>@row["Status"]</td>
+            <td>
+                <!-- OUTSTANDING -->
+                <a href="/PurchaseOrder/Outstanding/@row["POId"]"
+                   class="btn btn-warning btn-sm">
+                    Outstanding
+                </a>
+            </td>
         </tr>
     }
 </table>
