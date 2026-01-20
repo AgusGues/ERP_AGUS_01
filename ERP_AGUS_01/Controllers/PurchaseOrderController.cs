@@ -201,33 +201,40 @@ namespace ERP_AGUS_01.Controllers
             return View(dt);
         }
 
-        public IActionResult AllPurchaseDetail(string keyword)
+        public IActionResult PODetailAll(string keyword)
         {
-            string query =
-            @"select p.POId, p.PONumber, p.PODate, s.SupplierName, i.ItemName,
-            pd.Qty, pd.Price, p.Status
-            from
-            PurchaseOrders p inner join PurchaseOrderDetails pd on pd.POId = p.POId
-            inner join Suppliers s on p.SupplierId= s.SupplierId
-            inner join Items i on pd.ItemId = i.ItemId";
+            string query = @"
+    SELECT 
+        p.POId,
+        p.PONumber,
+        p.PODate,
+        s.SupplierName,
+        i.ItemName,
+        pd.Qty,
+        pd.Price,
+        p.Status
+    FROM PurchaseOrders p
+    INNER JOIN PurchaseOrderDetails pd ON pd.POId = p.POId
+    INNER JOIN Suppliers s ON p.SupplierId = s.SupplierId
+    INNER JOIN Items i ON pd.ItemId = i.ItemId
+    WHERE 1 = 1
+    ";
+
+            List<SqlParameter> parameters = new();
 
             if (!string.IsNullOrEmpty(keyword))
             {
-                query += " where p.PONumber = @PONumber ";
+                query += " AND p.PONumber LIKE @PONumber ";
+                parameters.Add(new SqlParameter("@PONumber", "%" + keyword + "%"));
             }
 
-           
-                DataTable dt = _db.ExecuteQuery(query,
-
-                new[]
-                 {
-                     new SqlParameter("@PONumber",keyword)
-                });
+            DataTable dt = _db.ExecuteQuery(query, parameters.ToArray());
 
             ViewBag.Keyword = keyword;
-            return View(dt);
 
+            return View(dt);
         }
+
 
 
     }

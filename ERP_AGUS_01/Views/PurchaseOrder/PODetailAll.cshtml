@@ -1,0 +1,48 @@
+﻿@using System.Data
+@model DataTable
+
+<h4>All Purchase Order Details</h4>
+
+<form asp-action="PODetailAll" method="get" class="mb-3">
+    <div class="input-group">
+        <input type="text"
+               name="keyword"
+               value="@ViewBag.Keyword"
+               class="form-control"
+               placeholder="Cari Nomor PO" />
+        <button class="btn btn-primary" type="submit">Search</button>
+        <a asp-action="PODetailAll" class="btn btn-secondary">Reset</a>
+    </div>
+</form>
+
+<table class="table table-bordered table-striped">
+    <thead class="table-dark">
+        <tr>
+            <th>POId</th>
+            <th>PO Number</th>
+            <th>PO Date</th>
+            <th>Supplier Name</th>
+            <th>Item Name</th>
+            <th class="text-end">Qty</th>
+            <th class="text-end">Price</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (DataRow r in Model.Rows)
+        {
+            <tr>
+                <td>@r["POId"]</td>
+                <td>@r["PONumber"]</td>
+                <td>@Convert.ToDateTime(r["PODate"]).ToString("dd/MM/yyyy")</td>
+                <td>@r["SupplierName"]</td>
+                <td>@r["ItemName"]</td>
+                <td class="text-end">@r["Qty"]</td>
+                <td class="text-end">@r["Price"]</td>
+                <td>@r["Status"]</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a asp-action="Index" class="btn btn-secondary">Kembali</a>
