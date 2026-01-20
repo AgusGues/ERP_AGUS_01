@@ -6,6 +6,10 @@
     DataRow header = ViewBag.Header as DataRow;
 }
 
+<div class="text-end">
+    <button class="btn btn-warning btn-sm">View All Outstanding</button>
+</div>
+
 @if (header != null)
 {
     <h4>Outstanding - @header["PONumber"]</h4>
