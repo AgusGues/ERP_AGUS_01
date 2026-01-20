@@ -68,9 +68,9 @@ namespace ERP_AGUS_01.Controllers
                 if (item.ItemId <= 0) continue;
 
                 _db.ExecuteNonQuery(@"
-                INSERT INTO PurchaseOrderDetails
-                (POId, ItemId, Qty, Price)
-                VALUES (@POId, @ItemId, @Qty, @Price)",
+                                    INSERT INTO PurchaseOrderDetails
+                                    (POId, ItemId, Qty, Price)
+                                    VALUES (@POId, @ItemId, @Qty, @Price)",
                     new[]
                     {
                     new SqlParameter("@POId", poId),
@@ -112,8 +112,8 @@ namespace ERP_AGUS_01.Controllers
         {
             DataTable dt = _db.ExecuteQuery(
                 @"SELECT TOP 10 ItemId, ItemName
-          FROM Items
-          WHERE IsActive=1 AND ItemName LIKE @q",
+                  FROM Items
+                  WHERE IsActive=1 AND ItemName LIKE @q",
                 new[] { new SqlParameter("@q", "%" + term + "%") });
 
             var result = new List<object>();
@@ -152,19 +152,54 @@ namespace ERP_AGUS_01.Controllers
 
         public IActionResult Outstanding(int id)
         {
+            
+            
             DataTable dt = _db.ExecuteQuery(@"
             SELECT *
             FROM vw_POOutstanding
-            WHERE POId = @POId
-              AND OutstandingQty > 0",
+            WHERE POId = @POId AND OutstandingQty > 0",
                 new[] {
                 new SqlParameter("@POId", id)
                 });
 
+            //Query 2
+            DataTable dtHeader = _db.ExecuteQuery(@"
+            select PONumber from PurchaseOrders where POId=@POId",
+            new[] {
+                new SqlParameter("@POId", id)
+            });
+
+            // Ambil 1 row
+            DataRow headerRow = null;
+            if (dtHeader.Rows.Count > 0)
+                headerRow = dtHeader.Rows[0];
+
+            ViewBag.Header = headerRow;
+            
+
             ViewBag.POId = id;
             return View(dt);
+            
         }
 
+
+        public IActionResult DetailPO(int id)
+        {
+            DataTable dt = _db.ExecuteQuery(@"
+            select p.POId, p.PONumber, p.PODate, s.SupplierName, i.ItemName,
+            pd.Qty, pd.Price, p.Status
+            from
+            PurchaseOrders p inner join PurchaseOrderDetails pd on pd.POId = p.POId
+            inner join Suppliers s on p.SupplierId= s.SupplierId
+            inner join Items i on pd.ItemId = i.ItemId
+            where p.POId = @POId",
+             new[]
+             {
+                 new SqlParameter("@POId",id)
+             });
+            
+            return View(dt);
+        }
 
 
     }

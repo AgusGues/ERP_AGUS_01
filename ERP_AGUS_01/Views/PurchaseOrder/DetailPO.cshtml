@@ -1,0 +1,42 @@
+﻿@using System.Data
+@model DataTable
+
+@{
+    ViewData["Title"] = "Detail Purchase Order";
+}
+
+<table class="table table-bordered table-striped">
+    <thead class="table-dark">
+        <tr>
+                <th>POId</th>
+                <th class="text-end">PO Number</th>
+                <th class="text-end">PO Date</th>
+                <th class="text-end">Supplier Name</th>
+                <th class="text-end">Item Name</th>
+                <th class="text-end">Qty</th>
+                <th class="text-end">Price</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        
+        @foreach (DataRow r in Model.Rows)
+        {
+            <tr>
+                <td class="text-end">@r["POId"]</td>
+                <td class="text-end">@r["PONumber"]</td>
+                <td class="text-end">@Convert.ToDateTime(@r["PODate"]).ToString("dd/MM/yyyy")</td>
+                <td class="text-end">@r["SupplierName"]</td>
+                <td>@r["ItemName"]</td>
+                <td class="text-end">@r["Qty"]</td>
+                <td class="text-end">@r["Price"]</td>
+            </tr>
+            
+        }
+    </tbody>
+    
+</table>
+
+<a href="/PurchaseOrder" class="btn btn-secondary">
+    Kembali
+</a>

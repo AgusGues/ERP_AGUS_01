@@ -35,10 +35,15 @@
             <td>@row["Status"]</td>
             <td>
                 <!-- OUTSTANDING -->
-                <a href="/PurchaseOrder/Outstanding/@row["POId"]"
-                   class="btn btn-warning btn-sm">
+                <a href="/PurchaseOrder/Outstanding/@row["POId"]" class="btn btn-warning btn-sm">
                     Outstanding
                 </a>
+
+                <!-- Detail -->
+                <a href="/PurchaseOrder/DetailPO/@row["POId"]" class="btn btn-info btn-sm">
+                    Detail
+                </a>
+
             </td>
         </tr>
     }

@@ -3,9 +3,19 @@
 
 @{
     ViewData["Title"] = "Outstanding Purchase Order";
+    DataRow header = ViewBag.Header as DataRow;
 }
 
-<h3>Outstanding PO - @ViewBag.POId</h3>
+@if (header != null)
+{
+    <h4>Outstanding - @header["PONumber"]</h4>
+}
+else
+{
+    <p class="text-danger">PO tidak ditemukan</p>
+}
+
+
 
 <table class="table table-bordered table-striped">
     <thead class="table-dark">
