@@ -201,6 +201,34 @@ namespace ERP_AGUS_01.Controllers
             return View(dt);
         }
 
+        public IActionResult AllPurchaseDetail(string keyword)
+        {
+            string query =
+            @"select p.POId, p.PONumber, p.PODate, s.SupplierName, i.ItemName,
+            pd.Qty, pd.Price, p.Status
+            from
+            PurchaseOrders p inner join PurchaseOrderDetails pd on pd.POId = p.POId
+            inner join Suppliers s on p.SupplierId= s.SupplierId
+            inner join Items i on pd.ItemId = i.ItemId";
+
+            if (!string.IsNullOrEmpty(keyword))
+            {
+                query += " where p.PONumber = @PONumber ";
+            }
+
+           
+                DataTable dt = _db.ExecuteQuery(query,
+
+                new[]
+                 {
+                     new SqlParameter("@PONumber",keyword)
+                });
+
+            ViewBag.Keyword = keyword;
+            return View(dt);
+
+        }
+
 
     }
 }

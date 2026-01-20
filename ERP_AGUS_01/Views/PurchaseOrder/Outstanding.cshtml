@@ -6,8 +6,9 @@
     DataRow header = ViewBag.Header as DataRow;
 }
 
-<div class="text-end">
-    <button class="btn btn-warning btn-sm">View All Outstanding</button>
+<div class="d-flex justify-content-end">
+    <a href="/PurchaseOrder/OutstandingDetail" class="btn btn-warning btn-sm">View All Outstanding</a>
+    
 </div>
 
 @if (header != null)
