@@ -204,21 +204,21 @@ namespace ERP_AGUS_01.Controllers
         public IActionResult PODetailAll(string keyword)
         {
             string query = @"
-    SELECT 
-        p.POId,
-        p.PONumber,
-        p.PODate,
-        s.SupplierName,
-        i.ItemName,
-        pd.Qty,
-        pd.Price,
-        p.Status
-    FROM PurchaseOrders p
-    INNER JOIN PurchaseOrderDetails pd ON pd.POId = p.POId
-    INNER JOIN Suppliers s ON p.SupplierId = s.SupplierId
-    INNER JOIN Items i ON pd.ItemId = i.ItemId
-    WHERE 1 = 1
-    ";
+                            SELECT 
+                                p.POId,
+                                p.PONumber,
+                                p.PODate,
+                                s.SupplierName,
+                                i.ItemName,
+                                pd.Qty,
+                                pd.Price,
+                                p.Status
+                            FROM PurchaseOrders p
+                            INNER JOIN PurchaseOrderDetails pd ON pd.POId = p.POId
+                            INNER JOIN Suppliers s ON p.SupplierId = s.SupplierId
+                            INNER JOIN Items i ON pd.ItemId = i.ItemId
+                            WHERE 1 = 1
+                            ";
 
             List<SqlParameter> parameters = new();
 
