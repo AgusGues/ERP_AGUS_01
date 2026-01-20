@@ -236,6 +236,64 @@ namespace ERP_AGUS_01.Controllers
         }
 
 
+        public IActionResult AllOutstandingDetail(string keyword)
+        {
+            string query = @"
+                            WITH ar AS
+                            (
+                                SELECT
+                                    d.PODetailId AS POItemId,
+                                    d.POId,
+                                    d.ItemId,
+                                    i.ItemName,
+                                    d.Qty AS POQty,
+                                    ISNULL(SUM(grd.Qty), 0) AS ReceivedQty,
+                                    d.Qty - ISNULL(SUM(grd.Qty), 0) AS OutstandingQty
+                                FROM PurchaseOrderDetails d
+                                JOIN Items i 
+                                    ON d.ItemId = i.ItemId
+                                LEFT JOIN GoodsReceipts grh
+                                    ON grh.POId = d.POId
+                                LEFT JOIN GoodsReceiptDetails grd
+                                    ON grd.ReceiptId = grh.ReceiptId
+                                   AND grd.ItemId = d.ItemId
+                                GROUP BY
+                                    d.PODetailId,
+                                    d.POId,
+                                    d.ItemId,
+                                    i.ItemName,
+                                    d.Qty
+                            )
+                            SELECT
+                                p.PONumber,
+                                ar.POId,
+                                ar.ItemId,
+                                ar.ItemName,
+                                ar.POQty,
+                                ar.ReceivedQty,
+                                ar.OutstandingQty
+                            FROM ar
+                            JOIN PurchaseOrders p
+                                ON ar.POId = p.POId
+                            WHERE ar.OutstandingQty > 0 
+                            ";
+
+            List<SqlParameter> parameters = new();
+
+            if (!string.IsNullOrEmpty(keyword))
+            {
+                query += " AND p.PONumber LIKE @PONumber ";
+                parameters.Add(new SqlParameter("@PONumber", "%" + keyword + "%"));
+            }
+
+            DataTable dt = _db.ExecuteQuery(query, parameters.ToArray());
+
+            ViewBag.Keyword = keyword;
+
+            return View(dt);
+        }
+
+
 
     }
 }
