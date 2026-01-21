@@ -1,5 +1,9 @@
 ﻿@model List<Items>
 
+@{
+    ViewData["Title"] = "Item Produk";
+}
+
 @if (TempData["Error"] != null)
 {
     <div class="alert alert-danger">@TempData["Error"]</div>
@@ -7,27 +11,31 @@
 
 <a asp-action="Create" class="btn btn-primary mb-2">Tambah Item</a>
 
-<table class="table table-bordered">
+<table class="table table-bordered table-striped">
+    <thead class="table-dark">
     <tr>
         <th>Kode</th>
         <th>Nama</th>
         <th>Unit</th>
-        <th width="160">Aksi</th>
+        <th width="125">Aksi</th>
     </tr>
-    @foreach (var i in Model)
-    {
-        <tr>
-            <td>@i.ItemCode</td>
-            <td>@i.ItemName</td>
-            <td>@i.Unit</td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@i.ItemId"
-                   class="btn btn-warning btn-sm">Edit</a>
+    <thead class="table-dark">
+        <tbody>
+            @foreach (var i in Model)
+            {
+                <tr>
+                    <td>@i.ItemCode</td>
+                    <td>@i.ItemName</td>
+                    <td>@i.Unit</td>
+                    <td>
+                        <a asp-action="Edit" asp-route-id="@i.ItemId"
+                           class="btn btn-warning btn-sm">Edit</a>
 
-                <a asp-action="Delete" asp-route-id="@i.ItemId"
-                   onclick="return confirm('Yakin hapus item ini?')"
-                   class="btn btn-danger btn-sm">Delete</a>
-            </td>
-        </tr>
-    }
+                        <a asp-action="Delete" asp-route-id="@i.ItemId"
+                           onclick="return confirm('Yakin hapus item ini?')"
+                           class="btn btn-danger btn-sm">Delete</a>
+                    </td>
+                </tr>
+            }
+    </tbody>
 </table>
