@@ -42,6 +42,7 @@ namespace ERP_AGUS_01.Controllers
             return View();
         }
 
+
         [HttpPost]
         public IActionResult Create(PurchaseOrderCreateVM model)
         {
@@ -78,6 +79,45 @@ namespace ERP_AGUS_01.Controllers
                     new SqlParameter("@Qty", item.Qty),
                     new SqlParameter("@Price", item.Price)
                     });
+            }
+
+            //insert termin pembayaran jika pembayaran menggunakan termin
+            if (model.Terms != null && model.Terms.Count > 0)
+            {
+                // 1️⃣ VALIDASI TOTAL PERSENTASE
+                decimal totalPercent = model.Terms
+                    .Where(t => t.Percentage > 0)
+                    .Sum(t => t.Percentage);
+
+                if (totalPercent != 100)
+                {
+                    ModelState.AddModelError("", "Total persentase termin harus 100%");
+                    return View(model);
+                }
+
+                // 2️⃣ INSERT SETELAH VALID
+                foreach (var term in model.Terms)
+                {
+                    if (term.Percentage <= 0)
+                        continue;
+
+                    if (term.DueDate == DateTime.MinValue)
+                        throw new Exception("Tanggal jatuh tempo termin wajib diisi");
+
+                    _db.ExecuteNonQuery(@"
+                                        INSERT INTO PurchaseOrderPaymentTerms
+                                        (POId, TermNo, DueDate, Percentage,Amount, Status)
+                                        VALUES
+                                        (@POId, @TermNo, @DueDate, @Percentage,@Amount, 'OPEN')",
+                                        new[]
+                                        {
+                                            new SqlParameter("@POId", poId),
+                                            new SqlParameter("@TermNo", term.TermNo),
+                                            new SqlParameter("@DueDate", term.DueDate),
+                                            new SqlParameter("@Percentage", term.Percentage),
+                                            new SqlParameter("@Amount",term.Amount)
+                                        });
+                }
             }
 
             TempData["Success"] = $"PO {poId} berhasil dibuat.";

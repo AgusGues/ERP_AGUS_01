@@ -4,5 +4,6 @@
     {
         public int SupplierId { get; set; }
         public List<PurchaseOrderItemVM> Items { get; set; } = new List<PurchaseOrderItemVM>();
+        public List<PurchaseOrderTermVM> Terms { get; set; } = new();
     }
 }
