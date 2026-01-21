@@ -2,13 +2,17 @@
 
 <a asp-action="Create" class="btn btn-primary mb-2">Tambah Gudang</a>
 
-<table class="table table-bordered">
+<table class="table table-bordered table-striped">
+    <thead class="table-dark">
     <tr>
         <th>Kode</th>
         <th>Nama Gudang</th>
         
-        <th width="160">Aksi</th>
+        <th width="125">Aksi</th>
     </tr>
+    </thead>
+
+    <tbody>
     @foreach (var w in Model)
     {
         <tr>
@@ -24,5 +28,7 @@
                    class="btn btn-danger btn-sm">Delete</a>
             </td>
         </tr>
+
     }
+    </tbody>
 </table>
