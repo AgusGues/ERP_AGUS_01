@@ -1,0 +1,106 @@
+﻿<button type="button"
+         class="btn btn-primary"
+         onclick="showPreview()">
+    👁 Preview Goods Receipt
+</button>
+
+<button type="submit"
+        id="btnSubmit"
+        class="btn btn-success d-none">
+    ✅ Confirm & Simpan GR
+</button>
+
+
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Preview Goods Receipt</h5>
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <table class="table table-bordered">
+                    <tr>
+                        <th width="30%">Item</th>
+                        <td id="pvItem"></td>
+                    </tr>
+                    <tr>
+                        <th>Qty Receipt</th>
+                        <td id="pvQty"></td>
+                    </tr>
+                    <tr>
+                        <th>Gudang</th>
+                        <td id="pvWarehouse"></td>
+                    </tr>
+                    <tr>
+                        <th>Lokasi</th>
+                        <td id="pvLocation"></td>
+                    </tr>
+                </table>
+
+                <div class="alert alert-warning">
+                    ⚠️ Pastikan data sudah benar sebelum menyimpan Goods Receipt
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Perbaiki
+                </button>
+
+                <button class="btn btn-success"
+                        onclick="confirmReceipt()">
+                    ✔ Ya, Simpan GR
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    function showPreview() {
+
+        // Ambil item yang dicentang
+        let checkedRow = $("input.item-check:checked").closest("tr");
+
+        // 1️⃣ Tidak ada item dipilih
+        if (checkedRow.length === 0) {
+            alert("Pilih item terlebih dahulu");
+            return;
+        }
+
+        // 2️⃣ Ambil Qty dari row yang sama
+        let qty = checkedRow.find("input.qty-receipt").val();
+
+        if (!qty || qty <= 0) {
+            alert("Qty receipt harus diisi");
+            return;
+        }
+
+        // 3️⃣ Ambil data lain
+        let itemName = checkedRow.find(".item-name").text();
+        let warehouseText = $("select[name='WarehouseId'] option:selected").text();
+        let locationText = $("select[name='LocationId'] option:selected").text();
+
+        // 4️⃣ Isi preview
+        $("#pvItem").text(itemName);
+        $("#pvQty").text(qty);
+        $("#pvWarehouse").text(warehouseText);
+        $("#pvLocation").text(locationText);
+
+        // 5️⃣ Tampilkan modal
+        new bootstrap.Modal(
+            document.getElementById('previewModal')
+        ).show();
+    }
+
+    function confirmReceipt() {
+        document.getElementById('btnSubmit').click();
+    }
+</script>
