@@ -1,0 +1,35 @@
+﻿@using System.Data
+@model DataTable
+
+@if (Model.Rows.Count == 0)
+{
+    <div class="text-muted">No data</div>
+}
+else
+{
+    <div class="mb-3">
+        <strong>Receipt No :</strong> @Model.Rows[0]["ReceiptNumber"] <br />
+        <strong>Date :</strong>
+        @Convert.ToDateTime(Model.Rows[0]["ReceiptDate"]).ToString("dd-MM-yyyy")
+    </div>
+
+    <table class="table table-bordered">
+        <thead class="table-dark">
+            <tr>
+                <th>Item</th>
+                <th class="text-end">Qty</th>
+                <th>Location</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (DataRow r in Model.Rows)
+            {
+                <tr>
+                    <td>@r["ItemName"]</td>
+                    <td class="text-end">@r["Qty"]</td>
+                    <td>@r["LocationCode"]</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

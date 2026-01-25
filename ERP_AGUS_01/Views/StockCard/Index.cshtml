@@ -1,0 +1,136 @@
+﻿@using System.Data
+@model DataTable
+
+@{
+    ViewData["Title"] = "Stock Card";
+}
+
+<link rel="stylesheet"
+      href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+
+<h4 class="mb-3">📦 Stock Card</h4>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-3">
+        <select name="ItemId" class="form-control">
+            <option value="">-- All Items --</option>
+            @foreach (DataRow i in ((DataTable)ViewBag.Items).Rows)
+            {
+                <option value="@i["ItemId"]">@i["ItemName"]</option>
+            }
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <select name="WarehouseId" class="form-control">
+            <option value="">-- All Warehouses --</option>
+            @foreach (DataRow w in ((DataTable)ViewBag.Warehouses).Rows)
+            {
+                <option value="@w["WarehouseId"]">@w["WarehouseName"]</option>
+            }
+        </select>
+    </div>
+
+    <div class="col-md-2">
+        <input type="date" name="DateFrom" class="form-control" />
+    </div>
+
+    <div class="col-md-2">
+        <input type="date" name="DateTo" class="form-control" />
+    </div>
+
+    <div class="col-md-2 d-grid">
+        <button class="btn btn-primary">🔍 Filter</button>
+    </div>
+</form>
+
+<div class="table-responsive">
+    <table class="table table-bordered table-striped" id="stockTable">
+        <thead class="table-dark">
+            <tr>
+                <th>Date</th>
+                <th>Item</th>
+                <th>Warehouse</th>
+                <th>Location</th>
+                <th>Type</th>
+                <th class="text-end">Qty In</th>
+                <th class="text-end">Qty Out</th>
+                <th>Ref</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (DataRow r in Model.Rows)
+            {
+                <tr>
+                    <td>@Convert.ToDateTime(r["TransDate"]).ToString("dd-MM-yyyy HH:mm")</td>
+                    <td>@r["ItemName"]</td>
+                    <td>@r["WarehouseName"]</td>
+                    <td>@r["LocationCode"]</td>
+                    <td>@r["TransType"]</td>
+                    <td class="text-end">@r["QtyIn"]</td>
+                    <td class="text-end">@r["QtyOut"]</td>
+                    <td>
+                        @if (r["ReceiptId"] != DBNull.Value)
+                        {
+                            <a href="javascript:void(0)"
+                               onclick="openGR(@r["ReceiptId"])"
+                               class="fw-bold text-primary">
+                                @r["ReferenceNo"]
+                            </a>
+                        }
+                        else
+                        {
+                            @r["ReferenceNo"]
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- 🔥 MODAL GOODS RECEIPT -->
+<div class="modal fade" id="grModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Goods Receipt Detail</h5>
+                <button type="button" class="btn-close"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div id="grContent" class="text-center text-muted">
+                    Loading...
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<script>
+    function openGR(receiptId) {
+        $('#grContent').html('Loading...');
+        new bootstrap.Modal(document.getElementById('grModal')).show();
+
+        $.get('/GoodsReceipt/ModalDetail', { id: receiptId })
+            .done(function (res) {
+                $('#grContent').html(res);
+            })
+            .fail(function () {
+                $('#grContent').html(
+                    '<div class="text-danger">Gagal load detail GR</div>'
+                );
+            });
+    }
+</script>
+

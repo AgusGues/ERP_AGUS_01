@@ -1,36 +1,34 @@
 ﻿@using System.Data
 @model DataTable
 
-<h3>Goods Receipt</h3>
+<h4>Goods Receipt</h4>
 
-<table class="table table-bordered table-striped">
+<table class="table table-bordered">
     <thead class="table-dark">
         <tr>
             <th>PO Number</th>
-            <th>Item</th>
-            <th>Qty PO</th>
-            <th>Received</th>
+            <th>Item Name</th>
             <th>Outstanding</th>
-            <th>Aksi</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
-        @foreach (DataRow row in Model.Rows)
+        @foreach (DataRow r in Model.Rows)
         {
             <tr>
-                <td>@row["PONumber"]</td>
-                <td>@row["ItemName"]</td>
-                <td>@row["POQty"]</td>
-                <td>@row["ReceivedQty"]</td>
-                <td class="text-danger fw-bold">@row["OutstandingQty"]</td>
+                <td>@r["PONumber"]</td>
+                <td>@r["ItemName"]</td>
+                <td>@r["OutstandingQty"]</td>
                 <td>
-                    <button class="btn btn-success btn-sm"
-                            onclick="openGRModal(
-                        @row["PODetailId"],
-                        '@row["PONumber"]',
-                        '@row["ItemName"]',
-                        @row["OutstandingQty"]
-                    )">
+                    <button class="btn btn-primary btn-sm"
+                            onclick="openModal(
+                                '@r["PONumber"]',
+                                '@r["ItemName"]',
+                                '@r["OutstandingQty"]',
+                                '@r["PODetailId"]',
+                                '@r["POId"]',
+                                '@r["ItemId"]'
+                            )">
                         Receipt
                     </button>
                 </td>
@@ -38,69 +36,112 @@
         }
     </tbody>
 </table>
-<div class="modal fade" id="grModal">
-    <div class="modal-dialog">
-        <form method="post" asp-action="Create" class="modal-content">
 
-            <div class="modal-header">
-                <h5>Preview Goods Receipt</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- ================= MODAL + FORM ================= -->
+<form asp-action="Save" method="post">
+
+    <div class="modal fade" id="grModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5>Goods Receipt</h5>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <!-- 🔥 HIDDEN FIELD LENGKAP -->
+                    <input type="hidden" name="POId" id="mPOId" />
+                    <input type="hidden" name="PODetailId" id="mPODetailId" />
+                    <input type="hidden" name="ItemId" id="mItemId" />
+
+                    <div class="mb-2">
+                        <label>PO Number</label>
+                        <input class="form-control" id="mPONumber" readonly />
+                    </div>
+
+                    <div class="mb-2">
+                        <label>Item Name</label>
+                        <input class="form-control" id="mItem" readonly />
+                    </div>
+
+                    <div class="mb-2">
+                        <label>Outstanding Qty</label>
+                        <input class="form-control" id="mOutstanding" readonly />
+                    </div>
+
+                    <div class="mb-2">
+                        <label>Qty Receipt</label>
+                        <input type="number"
+                               name="Qty"
+                               class="form-control"
+                               id="mQty"
+                               min="1"
+                               required />
+                    </div>
+
+                    <div class="mb-2">
+                        <label>Warehouse</label>
+                        <select name="WarehouseId" class="form-control" required>
+                            @foreach (DataRow w in ((DataTable)ViewBag.Warehouses).Rows)
+                            {
+                                <option value="@w["WarehouseId"]">
+                                    @w["WarehouseName"]
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-2">
+                        <label>Location</label>
+                        <select name="LocationId" class="form-control" required>
+                            @foreach (DataRow l in ((DataTable)ViewBag.Locations).Rows)
+                            {
+                                <option value="@l["LocationId"]">
+                                    @l["LocationCode"]
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-success">
+                        Simpan Receipt
+                    </button>
+                </div>
+
             </div>
-
-            <div class="modal-body">
-                <input type="hidden" name="PODetailId" id="PODetailId" />
-
-                <div class="mb-2">
-                    <label>PO Number</label>
-                    <input type="text" id="PONumber" class="form-control" readonly />
-                </div>
-
-                <div class="mb-2">
-                    <label>Item</label>
-                    <input type="text" id="ItemName" class="form-control" readonly />
-                </div>
-
-                <div class="mb-2">
-                    <label>Qty Receipt</label>
-                    <input type="number" name="Qty" id="Qty"
-                           class="form-control" min="1" required />
-                </div>
-
-                <div class="mb-2">
-                    <label>Warehouse</label>
-                    <select name="WarehouseId" class="form-control">
-                        @foreach (DataRow w in ViewBag.Warehouses.Rows)
-                        {
-                            <option value="@w["WarehouseId"]">@w["WarehouseName"]</option>
-                        }
-                    </select>
-                </div>
-
-                <div class="mb-2">
-                    <label>Location</label>
-                    <select name="LocationId" class="form-control">
-                        @foreach (DataRow l in ViewBag.Locations.Rows)
-                        {
-                            <option value="@l["LocationId"]">@l["LocationCode"]</option>
-                        }
-                    </select>
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <button class="btn btn-primary">Simpan Receipt</button>
-            </div>
-
-        </form>
+        </div>
     </div>
-</div>
-<script>
-    function openGRModal(poDetailId, poNumber, itemName, outstanding) {
 
-        $("#PODetailId").val(poDetailId);
-        $("#PONumber").val(poNumber);
-        $("#ItemName").val(itemName);
-        $("#Qty").val(outstanding);
+</form>
+
+<!-- ================= SCRIPT ================= -->
+<script>
+    function openModal(poNumber, itemName, outstanding, poDetailId, poId, itemId) {
+
+        document.getElementById("mPONumber").value = poNumber;
+        document.getElementById("mItem").value = itemName;
+        document.getElementById("mOutstanding").value = outstanding;
+
+        document.getElementById("mQty").value = "";
+        document.getElementById("mQty").max = outstanding;
+
+        document.getElementById("mPODetailId").value = poDetailId;
+        document.getElementById("mPOId").value = poId;
+        document.getElementById("mItemId").value = itemId;
+
+        // DEBUG AMAN
+        console.log({
+            POId: poId,
+            PODetailId: poDetailId,
+            ItemId: itemId
+        });
 
         new bootstrap.Modal(
             document.getElementById('grModal')

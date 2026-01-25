@@ -5,8 +5,6 @@ namespace ERP_AGUS_01.Data
 {
     public class DbHelper
     {
-        
-
         private readonly string _connectionString;
 
         public DbHelper(IConfiguration config)
@@ -14,38 +12,95 @@ namespace ERP_AGUS_01.Data
             _connectionString = config.GetConnectionString("DefaultConnection");
         }
 
+        // =========================
+        // 🔹 CONNECTION CONTROL
+        // =========================
+        public SqlConnection GetConnection()
+        {
+            return new SqlConnection(_connectionString);
+        }
+
+        // =========================
+        // 🔹 QUERY (NO TRANSACTION)
+        // =========================
         public DataTable ExecuteQuery(string sql, SqlParameter[] parameters = null)
         {
-            using SqlConnection conn = new(_connectionString);
-            using SqlCommand cmd = new(sql, conn);
+            using var conn = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(sql, conn);
             if (parameters != null)
                 cmd.Parameters.AddRange(parameters);
 
-            using SqlDataAdapter da = new(cmd);
-            DataTable dt = new();
+            using var da = new SqlDataAdapter(cmd);
+            var dt = new DataTable();
             da.Fill(dt);
             return dt;
         }
 
-        public int ExecuteNonQuery(string sql, SqlParameter[] parameters = null)
-        {
-            using SqlConnection conn = new(_connectionString);
-            conn.Open();
-            using SqlCommand cmd = new(sql, conn);
-            if (parameters != null)
-                cmd.Parameters.AddRange(parameters);
-            return cmd.ExecuteNonQuery();
-        }
-
         public object ExecuteScalar(string sql, SqlParameter[] parameters = null)
         {
-            using SqlConnection conn = new(_connectionString);
-            conn.Open();
-            using SqlCommand cmd = new(sql, conn);
+            using var conn = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(sql, conn);
             if (parameters != null)
                 cmd.Parameters.AddRange(parameters);
+
+            conn.Open();
             return cmd.ExecuteScalar();
         }
 
+        public int ExecuteNonQuery(string sql, SqlParameter[] parameters = null)
+        {
+            using var conn = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(sql, conn);
+            if (parameters != null)
+                cmd.Parameters.AddRange(parameters);
+
+            conn.Open();
+            return cmd.ExecuteNonQuery();
+        }
+
+        // =========================
+        // 🔹 TRANSACTION SAFE
+        // =========================
+        public DataTable ExecuteQuery(
+            string sql,
+            SqlParameter[] parameters,
+            SqlConnection conn,
+            SqlTransaction tran)
+        {
+            using var cmd = new SqlCommand(sql, conn, tran);
+            if (parameters != null)
+                cmd.Parameters.AddRange(parameters);
+
+            using var da = new SqlDataAdapter(cmd);
+            var dt = new DataTable();
+            da.Fill(dt);
+            return dt;
+        }
+
+        public object ExecuteScalar(
+            string sql,
+            SqlParameter[] parameters,
+            SqlConnection conn,
+            SqlTransaction tran)
+        {
+            using var cmd = new SqlCommand(sql, conn, tran);
+            if (parameters != null)
+                cmd.Parameters.AddRange(parameters);
+
+            return cmd.ExecuteScalar();
+        }
+
+        public int ExecuteNonQuery(
+            string sql,
+            SqlParameter[] parameters,
+            SqlConnection conn,
+            SqlTransaction tran)
+        {
+            using var cmd = new SqlCommand(sql, conn, tran);
+            if (parameters != null)
+                cmd.Parameters.AddRange(parameters);
+
+            return cmd.ExecuteNonQuery();
+        }
     }
 }
