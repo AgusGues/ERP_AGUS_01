@@ -44,6 +44,36 @@ namespace ERP_AGUS_01.Controllers
 
             return View(dt);
         }
+
+        public IActionResult ListByPO(int poId)
+        {
+            var dt = _db.ExecuteQuery(@"
+        SELECT
+            gr.ReceiptId,
+            gr.ReceiptNumber,
+            gr.ReceiptDate,
+            i.ItemName,
+            grd.Qty
+        FROM GoodsReceipts gr
+        JOIN GoodsReceiptDetails grd
+            ON gr.ReceiptId = grd.ReceiptId
+        JOIN PurchaseOrderDetails pod
+            ON grd.PODetailId = pod.PODetailId
+        JOIN Items i
+            ON pod.ItemId = i.ItemId
+        WHERE gr.POId = @POId
+        ORDER BY gr.ReceiptDate DESC
+    ",
+            new[] {
+        new SqlParameter("@POId", poId)
+            });
+
+            return PartialView("_ListByPO", dt);
+        }
+
+
+
+
         public IActionResult ModalDetail(int id)
         {
             var dt = _db.ExecuteQuery(@"

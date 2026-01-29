@@ -27,7 +27,12 @@
     {
         <tr>
             <td>@row["POId"]</td>
-            <td>@row["PONumber"]</td>
+            <td>
+                <a asp-controller="GoodsReceipt"
+                asp-action="ListByPO"
+                asp-route-poId="@row["POId"]">
+                @row["PONumber"]</a>
+            </td>
             <td>@row["SupplierName"]</td>
             <td>@Convert.ToDateTime(row["PODate"]).ToString("dd/MM/yyyy")</td>
             <td>@row["Status"]</td>

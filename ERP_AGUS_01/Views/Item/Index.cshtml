@@ -25,7 +25,13 @@
             {
                 <tr>
                     <td>@i.ItemCode</td>
-                    <td>@i.ItemName</td>
+                    <td>
+                    <a asp-controller="StockCard"
+                       asp-action="Index"
+                       asp-route-ItemId="@i.ItemId">
+                            @i.ItemName
+                    </a>
+                </td>
                     <td>@i.Unit</td>
                     <td>
                         <a asp-action="Edit" asp-route-id="@i.ItemId"
@@ -34,6 +40,9 @@
                         <a asp-action="Delete" asp-route-id="@i.ItemId"
                            onclick="return confirm('Yakin hapus item ini?')"
                            class="btn btn-danger btn-sm">Delete</a>
+
+                    
+
                     </td>
                 </tr>
             }
