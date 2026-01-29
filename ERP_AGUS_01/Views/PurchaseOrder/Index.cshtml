@@ -8,39 +8,64 @@
     </div>
 }
 
-
 <a asp-action="Create" class="btn btn-primary mb-2">Buat PO</a>
 
 <h3>Purchase Order List</h3>
 <table class="table table-bordered table-hover">
     <thead class="table-dark">
-    <tr>
-        <th>No</th>
-        <th>PO Number</th>
-        <th>Supplier Name</th>
-        <th>PO Date</th>
-        <th>Status</th>
-        <th width="170">Action</th>
-    </tr>
+        <tr>
+            <th>No</th>
+            <th>PO Number</th>
+            <th>Supplier Name</th>
+            <th>PO Date</th>
+            <th>Status</th>
+            <th width="170">Action</th>
+        </tr>
     </thead>
     @foreach ( DataRow row in Model.Rows)
     {
         <tr>
             <td>@row["POId"]</td>
+
             <td>
-                <a asp-controller="GoodsReceipt"
-                asp-action="ListByPO"
-                asp-route-poId="@row["POId"]">
-                @row["PONumber"]</a>
+                @if (@row["POId"] != DBNull.Value)
+                {
+                    <a href="javascript:void(0)"
+                    onclick="openGR(@row["POId"])"
+                    class="fw-bold text-primary">
+                        @row["PONumber"]
+                    </a>
+                }
+                else
+                {
+                    @row["PONumber"]
+                }
             </td>
+
             <td>@row["SupplierName"]</td>
             <td>@Convert.ToDateTime(row["PODate"]).ToString("dd/MM/yyyy")</td>
             <td>@row["Status"]</td>
             <td>
-                <!-- OUTSTANDING -->
-                <a href="/PurchaseOrder/Outstanding/@row["POId"]" class="btn btn-warning btn-sm">
-                    Outstanding
-                </a>
+
+                @if (row["Status"].ToString() == "CLOSED")
+                {
+                    <a class="btn btn-warning btn-sm disabled"
+                    href="javascript:void(0)"
+                    tabindex="-1"
+                    aria-disabled="true">
+                        Outstanding
+                    </a>
+                }
+                else
+                {
+                    <!-- OUTSTANDING -->
+                    <a href="/PurchaseOrder/Outstanding/@row["POId"]" class="btn btn-warning btn-sm">
+                        Outstanding
+                    </a>
+                    
+                }
+
+                
 
                 <!-- Detail -->
                 <a href="/PurchaseOrder/DetailPO/@row["POId"]" class="btn btn-info btn-sm">
@@ -51,3 +76,83 @@
         </tr>
     }
 </table>
+
+<div class="modal fade" id="grModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Goods Receipt</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <table class="table table-bordered table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Receipt No</th>
+                            <th>Date</th>
+                            <th>Supplier</th>
+                            <th>ItemName</th>
+                            <th class="text-end">Qty</th>
+                        </tr>
+                    </thead>
+                    <tbody id="grTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function openGR(poId) {
+
+        let modal = new bootstrap.Modal(document.getElementById('grModal'));
+        modal.show();
+
+        $('#grTableBody').html(`
+            <tr>
+                <td colspan="5" class="text-center">
+                    <div class="spinner-border text-primary"></div>
+                </td>
+            </tr>
+        `);
+
+        $.getJSON('/GoodsReceipt/GetByPO', { poId: poId })
+            .done(function (data) {
+
+                let rows = '';
+
+                if (data.length === 0) {
+                    rows = `
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">
+                                No Goods Receipt found
+                            </td>
+                        </tr>`;
+                } else {
+                    data.forEach(r => {
+                        rows += `
+                            <tr>
+                                <td>${r.receiptNumber}</td>
+                                <td>${r.receiptDate}</td>
+                                <td>${r.supplierName}</td>
+                                <td>${r.itemName}</td>
+                                <td>${r.qty}</td>
+                            </tr>`;
+                    });
+                }
+
+                $('#grTableBody').html(rows);
+            })
+            .fail(function () {
+                $('#grTableBody').html(`
+                    <tr>
+                        <td colspan="5" class="text-danger text-center">
+                            Failed to load data
+                        </td>
+                    </tr>
+                `);
+            });
+    }
+</script>
+

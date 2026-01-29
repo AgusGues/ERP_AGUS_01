@@ -226,13 +226,40 @@ namespace ERP_AGUS_01.Controllers
         public IActionResult DetailPO(int id)
         {
             DataTable dt = _db.ExecuteQuery(@"
-            select p.POId, p.PONumber, p.PODate, s.SupplierName, i.ItemName,
-            pd.Qty, pd.Price, p.Status
-            from
-            PurchaseOrders p inner join PurchaseOrderDetails pd on pd.POId = p.POId
-            inner join Suppliers s on p.SupplierId= s.SupplierId
-            inner join Items i on pd.ItemId = i.ItemId
-            where p.POId = @POId",
+                                            SELECT 
+                                            p.POId,
+                                            p.PONumber,
+                                            p.PODate,
+                                            s.SupplierName,
+                                            i.ItemName,
+                                            pd.Qty,
+                                            pd.Price,
+
+                                            ISNULL(SUM(grd.Qty), 0) AS ReceivedQty,
+                                            pd.Qty - ISNULL(SUM(grd.Qty), 0) AS OutstandingQty,
+
+                                            CASE 
+                                                WHEN pd.Qty <= ISNULL(SUM(grd.Qty), 0)
+                                                    THEN 'CLOSED'
+                                                ELSE 'OPEN'
+                                            END AS Status
+
+                                        FROM PurchaseOrders p
+                                        INNER JOIN PurchaseOrderDetails pd ON pd.POId = p.POId
+                                        INNER JOIN Suppliers s ON p.SupplierId = s.SupplierId
+                                        INNER JOIN Items i ON pd.ItemId = i.ItemId
+                                        LEFT JOIN GoodsReceiptDetails grd ON grd.PODetailId = pd.PODetailId
+
+                                        WHERE p.POId = @POId
+
+                                        GROUP BY
+                                            p.POId, p.PONumber, p.PODate,
+                                            s.SupplierName,
+                                            i.ItemName,
+                                            pd.PODetailId,
+                                            pd.Qty,
+                                            pd.Price;
+",
              new[]
              {
                  new SqlParameter("@POId",id)
@@ -244,27 +271,47 @@ namespace ERP_AGUS_01.Controllers
         public IActionResult PODetailAll(string keyword)
         {
             string query = @"
-                            SELECT 
-                                p.POId,
-                                p.PONumber,
-                                p.PODate,
-                                s.SupplierName,
-                                i.ItemName,
-                                pd.Qty,
-                                pd.Price,
-                                p.Status
-                            FROM PurchaseOrders p
-                            INNER JOIN PurchaseOrderDetails pd ON pd.POId = p.POId
-                            INNER JOIN Suppliers s ON p.SupplierId = s.SupplierId
-                            INNER JOIN Items i ON pd.ItemId = i.ItemId
-                            WHERE 1 = 1
+                            with p as (SELECT 
+                            p.POId,
+                            p.PONumber,
+                            p.PODate,
+                            s.SupplierName,
+                            i.ItemName,
+                            pd.Qty,
+                            pd.Price,
+
+                            ISNULL(SUM(grd.Qty), 0) AS ReceivedQty,
+                            pd.Qty - ISNULL(SUM(grd.Qty), 0) AS OutstandingQty,
+
+                            CASE 
+                                WHEN pd.Qty <= ISNULL(SUM(grd.Qty), 0)
+                                    THEN 'CLOSED'
+                                ELSE 'OPEN'
+                            END AS Status
+
+                        FROM PurchaseOrders p
+                        INNER JOIN PurchaseOrderDetails pd ON pd.POId = p.POId
+                        INNER JOIN Suppliers s ON p.SupplierId = s.SupplierId
+                        INNER JOIN Items i ON pd.ItemId = i.ItemId
+                        LEFT JOIN GoodsReceiptDetails grd ON grd.PODetailId = pd.PODetailId
+
+                        GROUP BY
+                            p.POId, p.PONumber, p.PODate,
+                            s.SupplierName,
+                            i.ItemName,
+                            pd.PODetailId,
+                            pd.Qty,
+                            pd.Price)
+    
+                            select p.POId,p.PONumber,p.PODate,p.SupplierName,p.ItemName,p.Qty,p.Price,p.ReceivedQty,p.OutstandingQty,p.Status from p where 1=1;
+
                             ";
 
             List<SqlParameter> parameters = new();
 
             if (!string.IsNullOrEmpty(keyword))
             {
-                query += " AND p.PONumber LIKE @PONumber ";
+                query += @" AND p.PONumber LIKE @PONumber ";
                 parameters.Add(new SqlParameter("@PONumber", "%" + keyword + "%"));
             }
 

@@ -45,34 +45,39 @@ namespace ERP_AGUS_01.Controllers
             return View(dt);
         }
 
-        public IActionResult ListByPO(int poId)
+        [HttpGet]
+        public IActionResult GetByPO(int poId)
         {
-            var dt = _db.ExecuteQuery(@"
+            DataTable dt = _db.ExecuteQuery(@"
         SELECT
             gr.ReceiptId,
             gr.ReceiptNumber,
             gr.ReceiptDate,
+            s.SupplierName,
             i.ItemName,
             grd.Qty
         FROM GoodsReceipts gr
-        JOIN GoodsReceiptDetails grd
-            ON gr.ReceiptId = grd.ReceiptId
-        JOIN PurchaseOrderDetails pod
-            ON grd.PODetailId = pod.PODetailId
-        JOIN Items i
-            ON pod.ItemId = i.ItemId
-        WHERE gr.POId = @POId
-        ORDER BY gr.ReceiptDate DESC
-    ",
-            new[] {
-        new SqlParameter("@POId", poId)
+        JOIN PurchaseOrders po ON gr.POId = po.POId
+        JOIN Suppliers s ON po.SupplierId = s.SupplierId
+        JOIN GoodsReceiptDetails grd on grd.ReceiptId=gr.ReceiptId
+        JOIN Items i on grd.ItemId = i.ItemId
+        WHERE gr.POId = @POId",
+                new[] { new SqlParameter("@POId", poId) }
+            );
+
+            var data = dt.AsEnumerable().Select(r => new
+            {
+                ReceiptId = r["ReceiptId"],
+                ReceiptNumber = r["ReceiptNumber"].ToString(),
+                ReceiptDate = Convert.ToDateTime(r["ReceiptDate"]).ToString("dd-MM-yyyy"),
+                SupplierName = r["SupplierName"].ToString(),
+                ItemName = r["ItemName"].ToString(),
+                Qty = r.Field<decimal>("Qty")
             });
 
-            return PartialView("_ListByPO", dt);
+
+            return Json(data);
         }
-
-
-
 
         public IActionResult ModalDetail(int id)
         {
@@ -243,28 +248,38 @@ namespace ERP_AGUS_01.Controllers
                         conn, tran);
                 }
 
-                // 6️⃣ CLOSE PO
-                decimal outstanding = Convert.ToDecimal(
+                // 6️⃣ CEK TOTAL OUTSTANDING SELURUH ITEM DALAM PO
+                decimal totalOutstanding = Convert.ToDecimal(
                     _db.ExecuteScalar(@"
-                        SELECT d.Qty - ISNULL(SUM(grd.Qty),0)
-                        FROM PurchaseOrderDetails d
-                        LEFT JOIN GoodsReceiptDetails grd
-                            ON d.PODetailId = grd.PODetailId
-                        WHERE d.PODetailId=@id
-                        GROUP BY d.Qty",
-                        new[] { new SqlParameter("@id", PODetailId) },
+                                        SELECT SUM(
+                                            CASE 
+                                                WHEN d.Qty - ISNULL(gr.ReceivedQty, 0) < 0 THEN 0
+                                                ELSE d.Qty - ISNULL(gr.ReceivedQty, 0)
+                                            END
+                                        )
+                                        FROM PurchaseOrderDetails d
+                                        LEFT JOIN (
+                                            SELECT PODetailId, SUM(Qty) AS ReceivedQty
+                                            FROM GoodsReceiptDetails
+                                            GROUP BY PODetailId
+                                        ) gr ON d.PODetailId = gr.PODetailId
+                                        WHERE d.POId = @POId",
+                        new[] { new SqlParameter("@POId", POId) },
                         conn, tran)
                 );
 
-                if (outstanding <= 0)
+                // 7️⃣ JIKA SEMUA ITEM HABIS → CLOSE PO
+                if (totalOutstanding <= 0)
                 {
                     _db.ExecuteNonQuery(@"
-                        UPDATE PurchaseOrders
-                        SET Status='CLOSED'
-                        WHERE POId=@POId",
+                                            UPDATE PurchaseOrders
+                                            SET Status = 'CLOSED'
+                                            WHERE POId = @POId",
                         new[] { new SqlParameter("@POId", POId) },
-                        conn, tran);
+                        conn, tran
+                    );
                 }
+
 
                 tran.Commit();
                 TempData["Success"] = "Goods Receipt berhasil disimpan";
