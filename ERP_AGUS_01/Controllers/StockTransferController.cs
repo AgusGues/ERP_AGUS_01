@@ -57,5 +57,7 @@ namespace ERP_AGUS_01.Controllers
 
             return Json(data);
         }
+
+        
     }
 }
