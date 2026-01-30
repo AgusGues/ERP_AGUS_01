@@ -1,0 +1,53 @@
+﻿@using System.Data
+@model DataTable
+
+@{
+    ViewData["Title"] = "Stock";
+}
+
+<h3 class="mb-3">📦 Stock </h3>
+
+<table class="table table-bordered table-striped">
+    <thead class="table-dark">
+        <tr>
+            <th>#</th>
+            <th>Item</th>
+            <th>Warehouse</th>
+            <th>Location</th>
+            <th class="text-end">Qty</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model.Rows.Count > 0)
+        {
+            int no = 1;
+            foreach (DataRow row in Model.Rows)
+            {
+                <tr>
+                    <td>@no</td>
+                    <td>
+                        <a asp-controller="StockCard"
+                           asp-action="Index"
+                           asp-route-ItemId="@row["ItemId"]"
+                           asp-route-WarehouseId="@row["WarehouseId"]"
+                           asp-route-LocationId="@row["LocationId"]">
+                            @row["ItemName"]
+                        </a>
+                    </td>
+                    <td>@row["WarehouseName"]</td>
+                    <td>@row["LocationCode"]</td>
+                    <td class="text-end fw-bold text-info">@row["Qty"]</td>
+                </tr>
+                no++;
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="5" class="text-center text-muted">
+                    Data stock kosong
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
