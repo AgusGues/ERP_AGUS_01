@@ -21,8 +21,12 @@
             <th>No</th>
             <th>Transfer No</th>
             <th>Date</th>
-            <th>From</th>
-            <th>To</th>
+            <th>Item Name</th>
+            <th>From Warehouse</th>
+            <th>To Warehouse</th>
+            <th>From Location</th>
+            <th>To Location</th>
+            <th>Qty</th>
             <th>Status</th>
         </tr>
     </thead>
@@ -33,8 +37,12 @@
                 <td>@r["TransferId"]</td>
                 <td>@r["TransferNumber"]</td>
                 <td>@Convert.ToDateTime(r["TransferDate"]).ToString("dd-MM-yyyy")</td>
-                <td>@r["FromWarehouse"] - @r["FromLocation"]</td>
-                <td>@r["ToWarehouse"] - @r["ToLocation"]</td>
+                <td>@r["ItemName"]</td>
+                <td>@r["FromWarehouse"]</td>
+                <td>@r["ToWarehouse"]</td>
+                <td>@r["FromLocation"]</td>
+                <td>@r["ToLocation"]</td>
+                <td>@r["Qty"]</td>
                 <td>
                     <span class="badge bg-warning text-dark">
                         @r["Status"]

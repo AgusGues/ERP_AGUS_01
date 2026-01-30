@@ -33,6 +33,7 @@ namespace ERP_AGUS_01.Controllers
         }
 
         public IActionResult Create() => View();
+        
         [HttpPost]
         public IActionResult Create(Items model)
         {
@@ -79,12 +80,12 @@ namespace ERP_AGUS_01.Controllers
                      ItemName=@Name,
                      Unit=@Unit
                   WHERE ItemId=@Id",
-new[]
-{
-    new SqlParameter("@Name", model.ItemName),
-    new SqlParameter("@Unit", model.Unit),
-    new SqlParameter("@Id", model.ItemId)
-});
+                new[]
+                {
+                    new SqlParameter("@Name", model.ItemName),
+                    new SqlParameter("@Unit", model.Unit),
+                    new SqlParameter("@Id", model.ItemId)
+                });
 
             return RedirectToAction(nameof(Index));
         }

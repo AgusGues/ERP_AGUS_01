@@ -152,15 +152,16 @@ namespace ERP_AGUS_01.Controllers
                 (ReceiptId, ItemId, PODetailId, Qty, LocationId)
                 VALUES
                 (@ReceiptId, @ItemId, @PODetailId, @Qty, @LocationId)",
-                                new[]
-                                {
+                 new[]
+                    {
                     new SqlParameter("@ReceiptId", receiptId),
                     new SqlParameter("@ItemId", itemId),
                     new SqlParameter("@PODetailId", PODetailId),
                     new SqlParameter("@Qty", Qty),
                     new SqlParameter("@LocationId", LocationId)
-                                },
-                                conn, tran
+                    },
+                    
+                    conn, tran
                 );
 
 
