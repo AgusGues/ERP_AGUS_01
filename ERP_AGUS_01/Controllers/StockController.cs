@@ -16,20 +16,10 @@ namespace ERP_AGUS_01.Controllers
         public IActionResult Index()
         {
             DataTable dt = _db.ExecuteQuery(@"
-            SELECT 
-            s.StockId,
-            s.ItemId,
-            s.WarehouseId,
-            s.LocationId,
-            i.ItemName,
-            w.WarehouseName,
-            wl.LocationCode,
-            s.Qty
-        FROM Stocks s
-        INNER JOIN Items i ON s.ItemId = i.ItemId
-        INNER JOIN Warehouses w ON s.WarehouseId = w.WarehouseId
-        INNER JOIN WarehouseLocations wl ON s.WarehouseId = wl.WarehouseId
-        ORDER BY i.ItemName;
+            select s.ItemId,i.ItemName,i.Unit,sum(s.Qty)Qty 
+            from Stocks s
+            join Items i on s.ItemId = i.ItemId
+            group by s.ItemId,i.ItemName,i.Unit;
         ");
 
             return View(dt);

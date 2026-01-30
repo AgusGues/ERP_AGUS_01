@@ -11,9 +11,8 @@
     <thead class="table-dark">
         <tr>
             <th>#</th>
-            <th>Item</th>
-            <th>Warehouse</th>
-            <th>Location</th>
+            <th>Item Name</th>
+            <th>Satuan</th>
             <th class="text-end">Qty</th>
         </tr>
     </thead>
@@ -28,14 +27,11 @@
                     <td>
                         <a asp-controller="StockCard"
                            asp-action="Index"
-                           asp-route-ItemId="@row["ItemId"]"
-                           asp-route-WarehouseId="@row["WarehouseId"]"
-                           asp-route-LocationId="@row["LocationId"]">
+                           asp-route-ItemId="@row["ItemId"]">
                             @row["ItemName"]
                         </a>
                     </td>
-                    <td>@row["WarehouseName"]</td>
-                    <td>@row["LocationCode"]</td>
+                    <td>@row["Unit"]</td>
                     <td class="text-end fw-bold text-info">@row["Qty"]</td>
                 </tr>
                 no++;
