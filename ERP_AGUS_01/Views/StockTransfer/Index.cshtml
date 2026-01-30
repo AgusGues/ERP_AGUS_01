@@ -1,0 +1,217 @@
+﻿@using System.Data
+@model DataTable
+
+@{
+    ViewData["Title"] = "Stock Transfer";
+
+}
+
+<h4 class="mb-3">🔄 Stock Transfer (Draft)</h4>
+
+<button class="btn btn-primary mb-3"
+        data-bs-toggle="modal"
+        data-bs-target="#transferModal">
+    ➕ New Transfer
+</button>
+
+<!-- LIST TRANSFER DRAFT -->
+<table class="table table-bordered">
+    <thead class="table-dark">
+        <tr>
+            <th>No</th>
+            <th>Transfer No</th>
+            <th>Date</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (DataRow r in Model.Rows)
+        {
+            <tr>
+                <td>@r["TransferId"]</td>
+                <td>@r["TransferNumber"]</td>
+                <td>@Convert.ToDateTime(r["TransferDate"]).ToString("dd-MM-yyyy")</td>
+                <td>@r["FromWarehouse"] - @r["FromLocation"]</td>
+                <td>@r["ToWarehouse"] - @r["ToLocation"]</td>
+                <td>
+                    <span class="badge bg-warning text-dark">
+                        @r["Status"]
+                    </span>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- ================= MODAL CREATE DRAFT ================= -->
+<form asp-action="SaveDraft" method="post">
+    <div class="modal fade" id="transferModal">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5>Create Stock Transfer (Draft)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label>From Warehouse</label>
+                            <select name="FromWarehouseId" class="form-control" required>
+                                @foreach (DataRow w in ((DataTable)ViewBag.Warehouses).Rows)
+                                {
+                                    <option value="@w["WarehouseId"]">@w["WarehouseName"]</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label>From Location</label>
+                            <select name="FromLocationId" class="form-control" required>
+                                @foreach (DataRow l in ((DataTable)ViewBag.Locations).Rows)
+                                {
+                                    <option value="@l["LocationId"]">@l["LocationCode"]</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label>To Warehouse</label>
+                            <select name="ToWarehouseId" class="form-control" required>
+                                @foreach (DataRow w in ((DataTable)ViewBag.Warehouses).Rows)
+                                {
+                                    <option value="@w["WarehouseId"]">@w["WarehouseName"]</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label>To Location</label>
+                            <select name="ToLocationId" class="form-control" required>
+                                @foreach (DataRow l in ((DataTable)ViewBag.Locations).Rows)
+                                {
+                                    <option value="@l["LocationId"]">@l["LocationCode"]</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- ITEMS -->
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Item</th>
+                                <th width="20%">Qty</th>
+                                <th width="5%"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemBody"></tbody>
+                    </table>
+
+                    <button type="button"
+                            class="btn btn-outline-primary"
+                            onclick="addItem()">
+                        + Add Item
+                    </button>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-success">
+                        💾 Save Draft
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- 🔴 WAJIB: JQUERY CORE -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- JQUERY UI -->
+<link rel="stylesheet"
+      href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+
+<style>
+    .ui-autocomplete {
+        z-index: 2000 !important;
+    }
+</style>
+
+<script>
+    function addItem() {
+        let row = `
+        <tr>
+            <td>
+                <input type="text"
+                       class="form-control item-autocomplete"
+                       placeholder="Ketik nama item..."
+                       autocomplete="off"
+                       required />
+
+                <input type="hidden" name="Items[].ItemId" />
+            </td>
+            <td>
+                <input type="number"
+                       class="form-control"
+                       name="Items[].Qty"
+                       min="1"
+                       required />
+            </td>
+            <td class="text-center">
+                <button type="button"
+                        class="btn btn-danger btn-sm"
+                        onclick="this.closest('tr').remove(); reindexItems();">
+                    ✖
+                </button>
+            </td>
+        </tr>`;
+
+        $("#itemBody").append(row);
+        reindexItems();
+    }
+
+
+        $(document).on("focus", ".item-autocomplete", function () {
+
+        if ($(this).data("ui-autocomplete")) return;
+
+        $(this).autocomplete({
+            source: function (request, response) {
+                $.ajax({
+                    url: '@Url.Action("SearchItem", "StockTransfer")',
+                    dataType: "json",
+                    data: { term: request.term },
+                    success: function (data) {
+                        response(data);
+                    }
+                });
+            },
+            minLength: 1,
+            select: function (event, ui) {
+                $(this).next("input[type=hidden]").val(ui.item.value); // ItemId
+                $(this).val(ui.item.label); // ItemName
+                return false;
+            }
+        });
+    });
+
+        function reindexItems() {
+        $("#itemBody tr").each(function (i) {
+            $(this).find("input[type=hidden]")
+                   .attr("name", `Items[${i}].ItemId`);
+
+            $(this).find("input[type=number]")
+                   .attr("name", `Items[${i}].Qty`);
+        });
+    }
+</script>
