@@ -2,6 +2,7 @@
 using System.Data;
 using Microsoft.Data.SqlClient;
 using ERP_AGUS_01.Data;
+using ERP_AGUS_01.Models;
 
 namespace ERP_AGUS_01.Controllers
 {
@@ -58,6 +59,10 @@ namespace ERP_AGUS_01.Controllers
             return Json(data);
         }
 
-        
+        [HttpPost]
+        public IActionResult SaveDraft(StockTransferVM model)
+        {
+            
+        }
     }
 }
