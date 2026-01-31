@@ -47,6 +47,14 @@
                     <span class="badge bg-warning text-dark">
                         @r["Status"]
                     </span>
+                    @if (r["Status"].ToString() == "DRAFT")
+                    {
+                        <a class="btn btn-success btn-sm"
+                           href="@Url.Action("PostTransfer", new { id = r["TransferId"] })"
+                           onclick="return confirm('Posting transfer ini?')">
+                            ✅ Post
+                        </a>
+                    }
                 </td>
             </tr>
         }
