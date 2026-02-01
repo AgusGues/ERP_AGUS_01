@@ -5,13 +5,13 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>5bbe99fb-04ca-4bfc-b5cf-61ca55bd222b</UserSecretsId>
-    <DockerDefaultTargetOS>Windows</DockerDefaultTargetOS>
-    <DockerfileContext>.</DockerfileContext>
+    <!-- DockerDefaultTargetOS dihapus supaya build di Linux Railway tidak error -->
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Paket untuk koneksi SQL Server -->
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.4" />
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
+    <!-- Paket Visual Studio khusus development dihapus -->
   </ItemGroup>
 
 </Project>
