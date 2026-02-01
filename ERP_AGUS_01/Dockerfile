@@ -1,20 +1,25 @@
-# Stage 1: Build
+# Stage 1: Build the app
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy csproj & restore dependencies
-COPY ERP_AGUS_01/*.csproj ./ERP_AGUS_01/
-RUN dotnet restore ERP_AGUS_01/*.csproj
+# Copy csproj and restore dependencies
+COPY *.csproj ./
+RUN dotnet restore
 
-# Copy seluruh kode & publish
-COPY ERP_AGUS_01/. ./ERP_AGUS_01/
-RUN dotnet publish ERP_AGUS_01/ -c Release -o /app
+# Copy all files and publish
+COPY . ./
+RUN dotnet publish -c Release -o /app/publish
 
 # Stage 2: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
-COPY --from=build /app .
-EXPOSE 80
 
-# Jalankan aplikasi
+# Copy published output from build stage
+COPY --from=build /app/publish .
+
+# Railway will inject PORT environment variable
+ENV PORT=8080
+EXPOSE $PORT
+
+# Run the app
 ENTRYPOINT ["dotnet", "ERP_AGUS_01.dll"]
