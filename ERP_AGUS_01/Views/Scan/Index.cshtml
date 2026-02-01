@@ -1,0 +1,66 @@
+﻿@{
+    ViewData["Title"] = "Scan Barcode";
+}
+
+<h3>Scan Barcode Produk</h3>
+
+<input type="text"
+       id="barcode"
+       class="form-control"
+       placeholder="Scan barcode..."
+       autofocus />
+
+<div id="result" class="mt-3"></div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+        let scanTimer = null;
+
+        $('#barcode').on('input', function () {
+            clearTimeout(scanTimer);
+
+            scanTimer = setTimeout(function () {
+                let barcode = $('#barcode').val().trim();
+                if (barcode.length < 6) return; // cegah ketik manual
+
+                lookupBarcode(barcode);
+            }, 300); // 300ms = jeda scanner
+        });
+
+        function lookupBarcode(barcode) {
+            $('#result').html('Mencari produk...');
+
+            $.get('/Scan/Lookup', { barcode: barcode })
+                .done(function (res) {
+
+                    if (res.status === 1) {
+                        let p = res.product;
+
+                        $('#result').html(`
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5>${p.product_name ?? '-'}</h5>
+                                    <p><b>Brand:</b> ${p.brands ?? '-'}</p>
+                                    <p><b>Kategori:</b> ${p.categories ?? '-'}</p>
+                                    ${p.image_front_url ? `<img src="${p.image_front_url}" width="150"/>` : ''}
+                                </div>
+                            </div>
+                        `);
+                    } else {
+                        $('#result').html(
+                            '<div class="alert alert-warning">Produk tidak ditemukan</div>'
+                        );
+                    }
+
+                    $('#barcode').val('').focus(); // siap scan berikutnya
+                })
+                .fail(function () {
+                    $('#result').html(
+                        '<div class="alert alert-danger">Gagal menghubungi server</div>'
+                    );
+                });
+        }
+    </script>
+}
