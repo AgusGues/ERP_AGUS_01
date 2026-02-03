@@ -73,83 +73,136 @@ namespace ERP_AGUS_01.Controllers
         [HttpPost]
         public IActionResult SaveDraft(StockTransferVM model)
         {
+            // =============================
+            // 0️⃣ VALIDASI AWAL (TANPA DB)
+            // =============================
+            if (model.Items == null || !model.Items.Any())
+            {
+                TempData["DraftError"] = "Item belum diisi";
+                return RedirectToAction("Index");
+            }
+
+            if (model.FromWarehouseId == model.ToWarehouseId &&
+                model.FromLocationId == model.ToLocationId)
+            {
+                TempData["DraftError"] = "Gudang & lokasi asal dan tujuan tidak boleh sama";
+                return RedirectToAction("Index");
+            }
+
+            // cek duplikat item
+            var duplicate = model.Items
+                .GroupBy(x => x.ItemId)
+                .FirstOrDefault(g => g.Count() > 1);
+
+            if (duplicate != null)
+            {
+                TempData["DraftError"] = "Item tidak boleh duplikat";
+                return RedirectToAction("Index");
+            }
+
             using var conn = _db.GetConnection();
             conn.Open();
             using var tran = conn.BeginTransaction();
 
             try
             {
+                // =============================
+                // 1️⃣ VALIDASI STOCK
+                // =============================
+                foreach (var item in model.Items)
+                {
+                    if (item.Qty <= 0)
+                        throw new Exception("Qty harus lebih dari 0");
 
-                string transferNo = "TRF-" + DateTime.Now.ToString("yyyyMMddHHmmss");
-
-                //1. StockTransfers HEADER
-                int transferId = Convert.ToInt32(_db.ExecuteScalar(@"
-                        insert into StockTransfers(
-                        TransferNumber,
-                        TransferDate,
-                        FromWarehouseId,
-                        ToWarehouseId,
-                        FromLocationId,
-                        ToLocationId,
-                        Status
-                        )
-                        VALUES
-                        (
-                        @TransferNumber,
-                        GETDATE(),
-                        @FromWarehouseId,
-                        @ToWarehouseId,
-                        @FromLocationId,
-                        @ToLocationId,
-                        'DRAFT');
-                    SELECT SCOPE_IDENTITY();",
-                    new[]
-                    {
-                        new SqlParameter("@TransferNumber",transferNo),
-                        new SqlParameter("@FromWarehouseId",model.FromWarehouseId),
-                        new SqlParameter("@ToWarehouseId",model.ToWarehouseId),
-                        new SqlParameter("@FromLocationId",model.FromLocationId),
-                        new SqlParameter("@ToLocationId",model.ToLocationId)
-                    },
-                    conn, tran)
+                    decimal stock = Convert.ToDecimal(
+                        _db.ExecuteScalar(@"
+                    SELECT ISNULL(Qty,0)
+                    FROM Stocks
+                    WHERE ItemId=@item
+                      AND WarehouseId=@wh
+                      AND LocationId=@loc",
+                            new[]
+                            {
+                        new SqlParameter("@item", item.ItemId),
+                        new SqlParameter("@wh", model.FromWarehouseId),
+                        new SqlParameter("@loc", model.FromLocationId)
+                            },
+                            conn, tran)
                     );
 
-                //2. Insert StockTransferDetails
+                    if (stock < item.Qty)
+                        throw new Exception(
+                            $"Stock tidak mencukupi untuk ItemId {item.ItemId} (Available: {stock})");
+                }
+
+                // =============================
+                // 2️⃣ INSERT HEADER
+                // =============================
+                string transferNo = "TRF-" + DateTime.Now.ToString("yyyyMMddHHmmss");
+
+                int transferId = Convert.ToInt32(_db.ExecuteScalar(@"
+            INSERT INTO StockTransfers
+            (
+                TransferNumber,
+                TransferDate,
+                FromWarehouseId,
+                ToWarehouseId,
+                FromLocationId,
+                ToLocationId,
+                Status
+            )
+            VALUES
+            (
+                @TransferNumber,
+                GETDATE(),
+                @FromWarehouseId,
+                @ToWarehouseId,
+                @FromLocationId,
+                @ToLocationId,
+                'DRAFT'
+            );
+            SELECT SCOPE_IDENTITY();",
+                    new[]
+                    {
+                new SqlParameter("@TransferNumber", transferNo),
+                new SqlParameter("@FromWarehouseId", model.FromWarehouseId),
+                new SqlParameter("@ToWarehouseId", model.ToWarehouseId),
+                new SqlParameter("@FromLocationId", model.FromLocationId),
+                new SqlParameter("@ToLocationId", model.ToLocationId)
+                    },
+                    conn, tran));
+
+                // =============================
+                // 3️⃣ INSERT DETAIL
+                // =============================
                 foreach (var item in model.Items)
                 {
                     _db.ExecuteNonQuery(@"
-                        INSERT INTO StockTransferDetails
-                        (
-                            TransferId,
-                            ItemId,
-                            Qty
-                        )
-                        VALUES
-                        (
-                            @TransferId,
-                            @ItemId,
-                            @Qty
-                        )",
-                new[]
-                {
+                INSERT INTO StockTransferDetails
+                (TransferId, ItemId, Qty)
+                VALUES
+                (@TransferId, @ItemId, @Qty)",
+                        new[]
+                        {
                     new SqlParameter("@TransferId", transferId),
                     new SqlParameter("@ItemId", item.ItemId),
                     new SqlParameter("@Qty", item.Qty)
-                },
-                conn, tran);
+                        },
+                        conn, tran);
                 }
 
                 tran.Commit();
-                TempData["Success"] = "Draft Transfer Stock Berhasil di Simpan";
+                TempData["Success"] = "Draft Transfer berhasil disimpan";
             }
-            catch 
+            catch (Exception ex)
             {
                 tran.Rollback();
-                throw;
+                TempData["DraftError"] = ex.Message;
             }
 
             return RedirectToAction("Index");
         }
+
 
         public IActionResult PostTransfer(int id)
         {
@@ -159,12 +212,12 @@ namespace ERP_AGUS_01.Controllers
 
             try
             {
-                // 1️⃣ HEADER TRANSFER
+                // 1️⃣ HEADER
                 DataTable header = _db.ExecuteQuery(@"
-                SELECT *
-                FROM StockTransfers
-                WHERE TransferId = @id
-                AND Status = 'DRAFT'",
+            SELECT *
+            FROM StockTransfers WITH (UPDLOCK, HOLDLOCK)
+            WHERE TransferId = @id
+              AND Status = 'DRAFT'",
                     new[] { new SqlParameter("@id", id) },
                     conn, tran);
 
@@ -175,100 +228,90 @@ namespace ERP_AGUS_01.Controllers
 
                 // 2️⃣ DETAIL
                 DataTable details = _db.ExecuteQuery(@"
-                    SELECT *
-                    FROM StockTransferDetails
-                    WHERE TransferId = @id",
+            SELECT *
+            FROM StockTransferDetails
+            WHERE TransferId = @id",
                     new[] { new SqlParameter("@id", id) },
                     conn, tran);
+
+                if (details.Rows.Count == 0)
+                    throw new Exception("Transfer tidak memiliki item");
+
+                int fromWh = Convert.ToInt32(h["FromWarehouseId"]);
+                int fromLoc = Convert.ToInt32(h["FromLocationId"]);
+                int toWh = Convert.ToInt32(h["ToWarehouseId"]);
+                int toLoc = Convert.ToInt32(h["ToLocationId"]);
 
                 foreach (DataRow d in details.Rows)
                 {
                     int itemId = Convert.ToInt32(d["ItemId"]);
                     decimal qty = Convert.ToDecimal(d["Qty"]);
 
-                    int fromWh = Convert.ToInt32(h["FromWarehouseId"]);
-                    int fromLoc = Convert.ToInt32(h["FromLocationId"]);
-                    int toWh = Convert.ToInt32(h["ToWarehouseId"]);
-                    int toLoc = Convert.ToInt32(h["ToLocationId"]);
+                    if (qty <= 0)
+                        throw new Exception("Qty transfer harus lebih dari 0");
 
                     // 3️⃣ CEK STOCK ASAL
                     decimal currentStock = Convert.ToDecimal(
                         _db.ExecuteScalar(@"
-                        SELECT ISNULL(Qty,0)
-                        FROM Stocks
-                        WHERE ItemId=@item AND WarehouseId=@wh AND LocationId=@loc",
+                                        SELECT ISNULL(SUM(Qty),0)
+                                        FROM Stocks WITH (UPDLOCK)
+                                        WHERE ItemId=@item AND WarehouseId=@wh AND LocationId=@loc",
                             new[] {
-                            new SqlParameter("@item", itemId),
-                            new SqlParameter("@wh", fromWh),
-                            new SqlParameter("@loc", fromLoc)
+                                    new SqlParameter("@item", itemId),
+                                    new SqlParameter("@wh", fromWh),
+                                    new SqlParameter("@loc", fromLoc)
                             },
                             conn, tran)
                     );
 
                     if (currentStock < qty)
-                        throw new Exception($"🚨 Stock tidak mencukupi (ItemId {itemId})");
+                        throw new Exception($"🚨 Stock tidak mencukupi (ItemId {itemId} - {currentStock})");
 
                     // =========================
                     // 4️⃣ STOCK KELUAR
                     // =========================
-
-                    // UPDATE STOCK
-                    _db.ExecuteNonQuery(@"
-                        UPDATE Stocks
-                        SET Qty = Qty - @qty
-                        WHERE ItemId=@item AND WarehouseId=@wh AND LocationId=@loc",
+                    int affected = _db.ExecuteNonQuery(@"
+                UPDATE Stocks
+                SET Qty = Qty - @qty
+                WHERE ItemId=@item AND WarehouseId=@wh AND LocationId=@loc",
                         new[] {
-                        new SqlParameter("@qty", qty),
-                        new SqlParameter("@item", itemId),
-                        new SqlParameter("@wh", fromWh),
-                        new SqlParameter("@loc", fromLoc)
+                    new SqlParameter("@qty", qty),
+                    new SqlParameter("@item", itemId),
+                    new SqlParameter("@wh", fromWh),
+                    new SqlParameter("@loc", fromLoc)
                         },
                         conn, tran);
 
-                    decimal balanceOut = currentStock - qty;
+                    if (affected == 0)
+                        throw new Exception("Data stock asal tidak ditemukan");
 
-                    // STOCK CARD OUT
+                    // STOCK CARD OUT (TANPA BALANCE)
                     _db.ExecuteNonQuery(@"
-                        INSERT INTO StockCards
-                        (TransDate, ItemId, WarehouseId, LocationId, TransType, ReferenceNo, QtyIn, QtyOut, Balance)
-                        VALUES
-                        (GETDATE(), @item, @wh, @loc, 'TRANSFER_OUT', @ref, 0, @qty, @balance)",
+                INSERT INTO StockCards
+                (TransDate, ItemId, WarehouseId, LocationId, TransType, ReferenceNo, QtyIn, QtyOut)
+                VALUES
+                (GETDATE(), @item, @wh, @loc, 'TRANSFER_OUT', @ref, 0, @qty)",
                         new[] {
-                        new SqlParameter("@item", itemId),
-                        new SqlParameter("@wh", fromWh),
-                        new SqlParameter("@loc", fromLoc),
-                        new SqlParameter("@qty", qty),
-                        new SqlParameter("@balance", balanceOut),
-                        new SqlParameter("@ref", h["TransferNumber"])
+                    new SqlParameter("@item", itemId),
+                    new SqlParameter("@wh", fromWh),
+                    new SqlParameter("@loc", fromLoc),
+                    new SqlParameter("@qty", qty),
+                    new SqlParameter("@ref", h["TransferNumber"])
                         },
                         conn, tran);
 
                     // =========================
                     // 5️⃣ STOCK MASUK
                     // =========================
-
-                    decimal destStock = Convert.ToDecimal(
-                        _db.ExecuteScalar(@"
-                        SELECT ISNULL(Qty,0)
-                        FROM Stocks
-                        WHERE ItemId=@item AND WarehouseId=@wh AND LocationId=@loc",
-                            new[] {
-                            new SqlParameter("@item", itemId),
-                            new SqlParameter("@wh", toWh),
-                            new SqlParameter("@loc", toLoc)
-                            },
-                            conn, tran)
-                    );
-
                     int exists = Convert.ToInt32(
                         _db.ExecuteScalar(@"
-                            SELECT COUNT(*)
-                            FROM Stocks
-                            WHERE ItemId=@item AND WarehouseId=@wh AND LocationId=@loc",
+                    SELECT COUNT(*)
+                    FROM Stocks
+                    WHERE ItemId=@item AND WarehouseId=@wh AND LocationId=@loc",
                             new[] {
-                            new SqlParameter("@item", itemId),
-                            new SqlParameter("@wh", toWh),
-                            new SqlParameter("@loc", toLoc)
+                        new SqlParameter("@item", itemId),
+                        new SqlParameter("@wh", toWh),
+                        new SqlParameter("@loc", toLoc)
                             },
                             conn, tran)
                     );
@@ -276,58 +319,53 @@ namespace ERP_AGUS_01.Controllers
                     if (exists == 0)
                     {
                         _db.ExecuteNonQuery(@"
-                            INSERT INTO Stocks (ItemId, WarehouseId, LocationId, Qty)
-                            VALUES (@item, @wh, @loc, @qty)",
+                    INSERT INTO Stocks (ItemId, WarehouseId, LocationId, Qty)
+                    VALUES (@item, @wh, @loc, @qty)",
                             new[] {
-                            new SqlParameter("@item", itemId),
-                            new SqlParameter("@wh", toWh),
-                            new SqlParameter("@loc", toLoc),
-                            new SqlParameter("@qty", qty)
+                        new SqlParameter("@item", itemId),
+                        new SqlParameter("@wh", toWh),
+                        new SqlParameter("@loc", toLoc),
+                        new SqlParameter("@qty", qty)
                             },
                             conn, tran);
                     }
                     else
                     {
                         _db.ExecuteNonQuery(@"
-                            UPDATE Stocks
-                            SET Qty = Qty + @qty
-                            WHERE ItemId=@item AND WarehouseId=@wh AND LocationId=@loc",
+                    UPDATE Stocks
+                    SET Qty = Qty + @qty
+                    WHERE ItemId=@item AND WarehouseId=@wh AND LocationId=@loc",
                             new[] {
-                            new SqlParameter("@qty", qty),
-                            new SqlParameter("@item", itemId),
-                            new SqlParameter("@wh", toWh),
-                            new SqlParameter("@loc", toLoc)
+                        new SqlParameter("@qty", qty),
+                        new SqlParameter("@item", itemId),
+                        new SqlParameter("@wh", toWh),
+                        new SqlParameter("@loc", toLoc)
                             },
                             conn, tran);
                     }
 
-                    decimal balanceIn = destStock + qty;
-
-                    // STOCK CARD IN
+                    // STOCK CARD IN (TANPA BALANCE)
                     _db.ExecuteNonQuery(@"
-                        INSERT INTO StockCards
-                        (TransDate, ItemId, WarehouseId, LocationId, TransType, ReferenceNo, QtyIn, QtyOut, Balance)
-                        VALUES
-                        (GETDATE(), @item, @wh, @loc, 'TRANSFER_IN', @ref, @qty, 0, @balance)",
+                INSERT INTO StockCards
+                (TransDate, ItemId, WarehouseId, LocationId, TransType, ReferenceNo, QtyIn, QtyOut)
+                VALUES
+                (GETDATE(), @item, @wh, @loc, 'TRANSFER_IN', @ref, @qty, 0)",
                         new[] {
-                        new SqlParameter("@item", itemId),
-                        new SqlParameter("@wh", toWh),
-                        new SqlParameter("@loc", toLoc),
-                        new SqlParameter("@qty", qty),
-                        new SqlParameter("@balance", balanceIn),
-                        new SqlParameter("@ref", h["TransferNumber"])
+                    new SqlParameter("@item", itemId),
+                    new SqlParameter("@wh", toWh),
+                    new SqlParameter("@loc", toLoc),
+                    new SqlParameter("@qty", qty),
+                    new SqlParameter("@ref", h["TransferNumber"])
                         },
                         conn, tran);
                 }
 
                 // 6️⃣ UPDATE STATUS
                 _db.ExecuteNonQuery(@"
-                    UPDATE StockTransfers
-                    SET Status = 'POSTED'
-                    WHERE TransferId = @id",
-                    new[] 
-                    { 
-                        new SqlParameter("@id", id) },
+            UPDATE StockTransfers
+            SET Status = 'POSTED'
+            WHERE TransferId = @id",
+                    new[] { new SqlParameter("@id", id) },
                     conn, tran);
 
                 tran.Commit();
@@ -341,6 +379,8 @@ namespace ERP_AGUS_01.Controllers
 
             return RedirectToAction("Index");
         }
+
+
 
 
     }
