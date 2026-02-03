@@ -106,192 +106,197 @@ namespace ERP_AGUS_01.Controllers
         // =========================
         [HttpPost]
         public IActionResult Save(
-            int POId,
-            int PODetailId,
-            decimal Qty,
-            int WarehouseId,
-            int LocationId)
+    int POId,
+    int PODetailId,
+    decimal Qty,
+    int WarehouseId,
+    int LocationId)
         {
             using var conn = _db.GetConnection();
             conn.Open();
-            using var tran = conn.BeginTransaction();
+            using var tran = conn.BeginTransaction(System.Data.IsolationLevel.Serializable);
 
             try
             {
-                // 1️⃣ ITEM ID
-                int itemId = Convert.ToInt32(
+                // ===============================
+                // 1️⃣ VALIDASI INPUT
+                // ===============================
+                if (Qty <= 0)
+                    throw new Exception("Qty receipt harus lebih dari 0");
+
+                if (WarehouseId <= 0 || LocationId <= 0)
+                    throw new Exception("Warehouse dan Location wajib diisi");
+
+                // ===============================
+                // 2️⃣ VALIDASI PO DETAIL + LOCK
+                // FIX: pastikan PODetail benar milik PO
+                // ===============================
+                DataTable poDetail = _db.ExecuteQuery(@"
+            SELECT ItemId, Qty
+            FROM PurchaseOrderDetails WITH (UPDLOCK, HOLDLOCK)
+            WHERE PODetailId=@id AND POId=@po",
+                    new[]
+                    {
+                new SqlParameter("@id", PODetailId),
+                new SqlParameter("@po", POId)
+                    },
+                    conn, tran);
+
+                if (poDetail.Rows.Count == 0)
+                    throw new Exception("PO Detail tidak valid");
+
+                int itemId = Convert.ToInt32(poDetail.Rows[0]["ItemId"]);
+                decimal poQty = Convert.ToDecimal(poDetail.Rows[0]["Qty"]);
+
+                // ===============================
+                // 3️⃣ HITUNG OUTSTANDING PER ITEM
+                // ===============================
+                decimal receivedQty = Convert.ToDecimal(
                     _db.ExecuteScalar(@"
-                        SELECT ItemId
-                        FROM PurchaseOrderDetails
-                        WHERE PODetailId=@id",
+                SELECT ISNULL(SUM(Qty),0)
+                FROM GoodsReceiptDetails WITH (UPDLOCK)
+                WHERE PODetailId=@id",
                         new[] { new SqlParameter("@id", PODetailId) },
                         conn, tran)
                 );
 
-                // 2️⃣ GR HEADER
+                decimal outstanding = poQty - receivedQty;
+
+                if (Qty > outstanding)
+                    throw new Exception("Qty receipt melebihi sisa PO");
+
+                // ===============================
+                // 4️⃣ GR HEADER (1 PER TRANSAKSI)
+                // FIX: buat sekali saja
+                // ===============================
                 int receiptId = Convert.ToInt32(
                     _db.ExecuteScalar(@"
-                        INSERT INTO GoodsReceipts
-                        (ReceiptNumber, ReceiptDate, POId, WarehouseId)
-                        VALUES
-                        ('GR-' + FORMAT(GETDATE(),'yyyyMMddHHmmss'),
-                         GETDATE(), @POId, @WarehouseId);
-                        SELECT SCOPE_IDENTITY();",
+                INSERT INTO GoodsReceipts
+                (ReceiptNumber, ReceiptDate, POId, WarehouseId)
+                VALUES
+                ('GR-' + FORMAT(GETDATE(),'yyyyMMddHHmmss'),
+                 GETDATE(), @POId, @WarehouseId);
+                SELECT SCOPE_IDENTITY();",
                         new[]
                         {
-                            new SqlParameter("@POId", POId),
-                            new SqlParameter("@WarehouseId", WarehouseId)
+                    new SqlParameter("@POId", POId),
+                    new SqlParameter("@WarehouseId", WarehouseId)
                         },
                         conn, tran)
                 );
 
-                
-                // 3️⃣ INSERT GR DETAIL
+                // ===============================
+                // 5️⃣ GR DETAIL
+                // ===============================
                 _db.ExecuteNonQuery(@"
-                INSERT INTO GoodsReceiptDetails
-                (ReceiptId, ItemId, PODetailId, Qty, LocationId)
-                VALUES
-                (@ReceiptId, @ItemId, @PODetailId, @Qty, @LocationId)",
-                 new[]
-                    {
-                    new SqlParameter("@ReceiptId", receiptId),
-                    new SqlParameter("@ItemId", itemId),
-                    new SqlParameter("@PODetailId", PODetailId),
-                    new SqlParameter("@Qty", Qty),
-                    new SqlParameter("@LocationId", LocationId)
-                    },
-                    
-                    conn, tran
-                );
-
-
-                // 4️⃣ STOCK CARD
-                _db.ExecuteNonQuery(@"
-                    INSERT INTO StockCards
-                    (
-                        ItemId, 
-                        WarehouseId, 
-                        LocationId, 
-                        TransDate, 
-                        TransType, 
-                        QtyIn, 
-                        QtyOut, 
-                        ReferenceNo
-                    )
-                    VALUES
-                    (   
-                        @ItemId, 
-                        @WarehouseId, 
-                        @LocationId,
-                        GETDATE(), 
-                        'GR', 
-                        @Qty, 
-                        0,
-                     (SELECT ReceiptNumber FROM GoodsReceipts WHERE ReceiptId=@ReceiptId))",
+            INSERT INTO GoodsReceiptDetails
+            (ReceiptId, ItemId, PODetailId, Qty, LocationId)
+            VALUES
+            (@ReceiptId, @ItemId, @PODetailId, @Qty, @LocationId)",
                     new[]
                     {
-                        new SqlParameter("@ItemId", itemId),
-                        new SqlParameter("@WarehouseId", WarehouseId),
-                        new SqlParameter("@LocationId", LocationId),
-                        new SqlParameter("@Qty", Qty),
-                        new SqlParameter("@ReceiptId", receiptId)
+                new SqlParameter("@ReceiptId", receiptId),
+                new SqlParameter("@ItemId", itemId),
+                new SqlParameter("@PODetailId", PODetailId),
+                new SqlParameter("@Qty", Qty),
+                new SqlParameter("@LocationId", LocationId)
                     },
                     conn, tran);
 
-                // 5️⃣ STOCK (UPSERT)
-                int exists = Convert.ToInt32(
-                    _db.ExecuteScalar(@"
-                        SELECT COUNT(*)
-                        FROM Stocks
-                        WHERE ItemId=@ItemId
-                          AND WarehouseId=@WarehouseId
-                          AND LocationId=@LocationId",
-                        new[]
-                        {
-                            new SqlParameter("@ItemId", itemId),
-                            new SqlParameter("@WarehouseId", WarehouseId),
-                            new SqlParameter("@LocationId", LocationId)
-                        },
-                        conn, tran)
-                );
+                // ===============================
+                // 6️⃣ STOCK CARD
+                // ===============================
+                _db.ExecuteNonQuery(@"
+            INSERT INTO StockCards
+            (ItemId, WarehouseId, LocationId, TransDate, TransType, QtyIn, QtyOut, ReferenceNo)
+            VALUES
+            (@ItemId, @WarehouseId, @LocationId, GETDATE(), 'GR', @Qty, 0,
+             (SELECT ReceiptNumber FROM GoodsReceipts WHERE ReceiptId=@ReceiptId))",
+                    new[]
+                    {
+                new SqlParameter("@ItemId", itemId),
+                new SqlParameter("@WarehouseId", WarehouseId),
+                new SqlParameter("@LocationId", LocationId),
+                new SqlParameter("@Qty", Qty),
+                new SqlParameter("@ReceiptId", receiptId)
+                    },
+                    conn, tran);
 
-                if (exists > 0)
+                // ===============================
+                // 7️⃣ STOCK UPSERT (AMAN)
+                // ===============================
+                int updated = _db.ExecuteNonQuery(@"
+            UPDATE Stocks WITH (UPDLOCK, HOLDLOCK)
+            SET Qty = Qty + @Qty
+            WHERE ItemId=@ItemId
+              AND WarehouseId=@WarehouseId
+              AND LocationId=@LocationId",
+                    new[]
+                    {
+                new SqlParameter("@Qty", Qty),
+                new SqlParameter("@ItemId", itemId),
+                new SqlParameter("@WarehouseId", WarehouseId),
+                new SqlParameter("@LocationId", LocationId)
+                    },
+                    conn, tran);
+
+                if (updated == 0)
                 {
                     _db.ExecuteNonQuery(@"
-                        UPDATE Stocks
-                        SET Qty = Qty + @Qty
-                        WHERE ItemId=@ItemId
-                          AND WarehouseId=@WarehouseId
-                          AND LocationId=@LocationId",
+                INSERT INTO Stocks
+                (ItemId, WarehouseId, LocationId, Qty)
+                VALUES
+                (@ItemId, @WarehouseId, @LocationId, @Qty)",
                         new[]
                         {
-                            new SqlParameter("@Qty", Qty),
-                            new SqlParameter("@ItemId", itemId),
-                            new SqlParameter("@WarehouseId", WarehouseId),
-                            new SqlParameter("@LocationId", LocationId)
+                    new SqlParameter("@ItemId", itemId),
+                    new SqlParameter("@WarehouseId", WarehouseId),
+                    new SqlParameter("@LocationId", LocationId),
+                    new SqlParameter("@Qty", Qty)
                         },
                         conn, tran);
                 }
-                else
-                {
-                    _db.ExecuteNonQuery(@"
-                        INSERT INTO Stocks
-                        (ItemId, WarehouseId, LocationId, Qty)
-                        VALUES
-                        (@ItemId, @WarehouseId, @LocationId, @Qty)",
-                        new[]
-                        {
-                            new SqlParameter("@ItemId", itemId),
-                            new SqlParameter("@WarehouseId", WarehouseId),
-                            new SqlParameter("@LocationId", LocationId),
-                            new SqlParameter("@Qty", Qty)
-                        },
-                        conn, tran);
-                }
 
-                // 6️⃣ CEK TOTAL OUTSTANDING SELURUH ITEM DALAM PO
+                // ===============================
+                // 8️⃣ CLOSE PO (PER ITEM AMAN)
+                // FIX: hitung outstanding per item
+                // ===============================
                 decimal totalOutstanding = Convert.ToDecimal(
                     _db.ExecuteScalar(@"
-                                        SELECT SUM(
-                                            CASE 
-                                                WHEN d.Qty - ISNULL(gr.ReceivedQty, 0) < 0 THEN 0
-                                                ELSE d.Qty - ISNULL(gr.ReceivedQty, 0)
-                                            END
-                                        )
-                                        FROM PurchaseOrderDetails d
-                                        LEFT JOIN (
-                                            SELECT PODetailId, SUM(Qty) AS ReceivedQty
-                                            FROM GoodsReceiptDetails
-                                            GROUP BY PODetailId
-                                        ) gr ON d.PODetailId = gr.PODetailId
-                                        WHERE d.POId = @POId",
+                SELECT SUM(x.Outstanding)
+                FROM (
+                    SELECT d.Qty - ISNULL(SUM(gr.Qty),0) AS Outstanding
+                    FROM PurchaseOrderDetails d
+                    LEFT JOIN GoodsReceiptDetails gr
+                        ON d.PODetailId = gr.PODetailId
+                    WHERE d.POId=@POId
+                    GROUP BY d.PODetailId, d.Qty
+                ) x",
                         new[] { new SqlParameter("@POId", POId) },
                         conn, tran)
                 );
 
-                // 7️⃣ JIKA SEMUA ITEM HABIS → CLOSE PO
                 if (totalOutstanding <= 0)
                 {
                     _db.ExecuteNonQuery(@"
-                                            UPDATE PurchaseOrders
-                                            SET Status = 'CLOSED'
-                                            WHERE POId = @POId",
+                UPDATE PurchaseOrders
+                SET Status='CLOSED'
+                WHERE POId=@POId",
                         new[] { new SqlParameter("@POId", POId) },
-                        conn, tran
-                    );
+                        conn, tran);
                 }
-
 
                 tran.Commit();
                 TempData["Success"] = "Goods Receipt berhasil disimpan";
             }
-            catch
+            catch (Exception ex)
             {
                 tran.Rollback();
-                throw;
+                TempData["Error"] = ex.Message;
             }
 
             return RedirectToAction("Index");
         }
+
     }
 }

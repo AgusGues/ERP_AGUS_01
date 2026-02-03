@@ -4,6 +4,14 @@
 
 <h3 class="mb-3">Create Purchase Order</h3>
 
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">
+        ❌ @TempData["Error"]
+    </div>
+}
+
+
 <form asp-action="Create" method="post">
 
     <!-- SUPPLIER -->
@@ -70,6 +78,14 @@
                     <h5 class="modal-title">Termin Pembayaran</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
+
+                @if (ViewBag.TermError != null)
+                {
+                    <div class="alert alert-danger">
+                        ❌ @ViewBag.TermError
+                    </div>
+                }
+
 
                 <div class="modal-body">
 
@@ -431,6 +447,14 @@
             $(document).on("keyup change", ".percentage", function () {
             calculateTermAmount();
         });
+
+        $(document).ready(function () {
+            var hasTermError = '@ViewBag.TermError';
+            if (hasTermError) {
+                $('#terminModal').modal('show');
+            }
+        });
+    
 
 
     </script>
