@@ -46,11 +46,15 @@ namespace ERP_AGUS_01.Controllers
         [HttpPost]
         public IActionResult Create(PurchaseOrderCreateVM model)
         {
-            if (!ModelState.IsValid || model.Items.Count == 0)
-            {
-                TempData["Error"] = "Isi supplier dan minimal satu item.";
-                return View(model);
-            }
+            //using var conn = _db.GetConnection();
+            //conn.Open();
+            //using var tran = conn.BeginTransaction();
+
+                if (!ModelState.IsValid || model.Items.Count == 0)
+                {
+                    TempData["Error"] = "Isi supplier dan minimal satu item.";
+                    return View(model);
+                }
 
             // Insert PO header
             int poId = Convert.ToInt32(
@@ -61,67 +65,74 @@ namespace ERP_AGUS_01.Controllers
             );
 
             if (poId <= 0)
-                throw new Exception("Gagal membuat PO Header");
+                    throw new Exception("Gagal membuat PO Header");
 
-            // Insert PO details
-            foreach (var item in model.Items)
-            {
-                if (item.ItemId <= 0) continue;
+                foreach (var item in model.Items)
+                {
+                    if (item.ItemId <= 0) continue;
 
-                _db.ExecuteNonQuery(@"
+                    _db.ExecuteNonQuery(@"
                                     INSERT INTO PurchaseOrderDetails
                                     (POId, ItemId, Qty, Price)
                                     VALUES (@POId, @ItemId, @Qty, @Price)",
-                    new[]
-                    {
-                    new SqlParameter("@POId", poId),
-                    new SqlParameter("@ItemId", item.ItemId),
-                    new SqlParameter("@Qty", item.Qty),
-                    new SqlParameter("@Price", item.Price)
-                    });
-            }
-
-            //insert termin pembayaran jika pembayaran menggunakan termin
-            if (model.Terms != null && model.Terms.Count > 0)
-            {
-                // 1️⃣ VALIDASI TOTAL PERSENTASE
-                decimal totalPercent = model.Terms
-                    .Where(t => t.Percentage > 0)
-                    .Sum(t => t.Percentage);
-
-                if (totalPercent != 100)
-                {
-                    ModelState.AddModelError("", "Total persentase termin harus 100%");
-                    return View(model);
+                        new[]
+                        {
+                            new SqlParameter("@POId", poId),
+                            new SqlParameter("@ItemId", item.ItemId),
+                            new SqlParameter("@Qty", item.Qty),
+                            new SqlParameter("@Price", item.Price)
+                        }
+                        );
                 }
 
-                // 2️⃣ INSERT SETELAH VALID
-                foreach (var term in model.Terms)
+                // Insert PO details
+
+                if (model.Terms != null && model.Terms.Count > 0)
                 {
-                    if (term.Percentage <= 0)
-                        continue;
+                    // 1️⃣ VALIDASI TOTAL PERSENTASE
+                    decimal totalPercent = model.Terms
+                        .Where(t => t.Percentage > 0)
+                        .Sum(t => t.Percentage);
 
-                    if (term.DueDate == DateTime.MinValue)
-                        throw new Exception("Tanggal jatuh tempo termin wajib diisi");
+                    if (totalPercent != 100)
+                    {
+                        ModelState.AddModelError("", "Total persentase termin harus 100%");
+                        return View(model);
+                    }
 
-                    _db.ExecuteNonQuery(@"
+                    // 2️⃣ INSERT SETELAH VALID
+                    foreach (var term in model.Terms)
+                    {
+                        if (term.Percentage <= 0)
+                            continue;
+
+                        if (term.DueDate == DateTime.MinValue)
+                            throw new Exception("Tanggal jatuh tempo termin wajib diisi");
+
+
+                        //insert termin pembayaran jika pembayaran menggunakan termin
+                        _db.ExecuteNonQuery(@"
                                         INSERT INTO PurchaseOrderPaymentTerms
                                         (POId, TermNo, DueDate, Percentage,Amount, Status)
                                         VALUES
                                         (@POId, @TermNo, @DueDate, @Percentage,@Amount, 'OPEN')",
-                                        new[]
-                                        {
+                                            new[]
+                                            {
                                             new SqlParameter("@POId", poId),
                                             new SqlParameter("@TermNo", term.TermNo),
                                             new SqlParameter("@DueDate", term.DueDate),
                                             new SqlParameter("@Percentage", term.Percentage),
                                             new SqlParameter("@Amount",term.Amount)
-                                        });
+                                            }
+                                            );
+                    }
                 }
-            }
 
-            TempData["Success"] = $"PO {poId} berhasil dibuat.";
-            return RedirectToAction(nameof(Index));
+                TempData["Success"] = $"PO {poId} berhasil dibuat.";
+                return RedirectToAction(nameof(Index));
+
+            
+           
         }
         
         public JsonResult SearchSupplier(string term)
